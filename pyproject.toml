@@ -4,4 +4,39 @@ version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.12"
-dependencies = []
+dependencies = [
+    "django>=5.1.6",
+]
+
+[dependency-groups]
+dev = [
+    "ipython>=9.0.1",
+    "ruff>=0.9.9",
+]
+test = [
+    "pytest>=8.3.5",
+    "pytest-cov>=6.0.0",
+    "pytest-django>=4.10.0",
+    "pytest-factoryboy>=2.7.0",
+]
+
+[tool.ruff.format]
+quote-style = "single"
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "simple_blog.settings.local"
+python_files = "test.py test_*.py *_tests.py"
+markers = [
+	"models: intended for testing db models relationships"
+]
+
+
+[tool.coverage.run]
+omit = [
+	"simple_blog/settings/*",
+	"simple_blog/wsgi.py",
+	"simple_blog/asgi.py",
+	"tests/factories/*",
+	"tests/conftest.py",
+	"manage.py"
+]
