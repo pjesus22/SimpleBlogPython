@@ -7,6 +7,12 @@ from PIL import Image
 from apps.utils.base_model import BaseModel
 
 
+def get_upload_path(instance, filename):
+    ext = filename.split('.')[-1].lstrip('.').lower()
+    file_type = instance._get_file_type(ext)
+    return os.path.join(str(instance.post.author.id), file_type, filename)
+
+
 class MediaFile(BaseModel):
     class Type(models.TextChoices):
         IMAGE = 'image'
@@ -19,13 +25,7 @@ class MediaFile(BaseModel):
         Type.AUDIO: ['mp3', 'aac', 'wav', 'ogg'],
     }
 
-    @staticmethod
-    def _get_upload_path(instance, filename):
-        ext = filename.split('.')[-1].lstrip('.').lower()
-        file_type = instance._get_file_type(ext)
-        return os.path.join(str(instance.post.author.id), file_type, filename)
-
-    file = models.FileField(upload_to=_get_upload_path)
+    file = models.FileField(upload_to=get_upload_path)
     post = models.ForeignKey(
         'content.Post', on_delete=models.CASCADE, related_name='media_files'
     )
