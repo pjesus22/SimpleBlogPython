@@ -1,0 +1,28 @@
+from django.db import models
+from django.utils.text import slugify
+
+from apps.utils.base_model import BaseModel
+
+from .categories import Category
+from .tags import Tag
+
+
+class Post(BaseModel):
+    author = models.ForeignKey(
+        'users.User', on_delete=models.CASCADE, related_name='posts'
+    )
+    category = models.ForeignKey(
+        Category, on_delete=models.CASCADE, related_name='posts'
+    )
+    tags = models.ManyToManyField(Tag, blank=True, related_name='post')
+    title = models.CharField(max_length=51)
+    slug = models.SlugField(max_length=51, unique=True, null=False)
+    content = models.TextField()
+
+    def __str__(self):
+        return self.title
+
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            self.slug = slugify(self.title)
+        super().save(*args, **kwargs)
