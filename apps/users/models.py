@@ -1,6 +1,6 @@
 from django.contrib.auth.models import AbstractUser, BaseUserManager
-from django.core.signals import post_save
 from django.db import models
+from django.db.models.signals import post_save
 from django.dispatch import receiver
 
 
@@ -50,9 +50,16 @@ class Author(User):
         proxy = True
 
 
+def get_user_profile_picture_upload_path(instance, filename):
+    return f'{instance.user.id}/image/profile/{filename}'
+
+
 class AuthorProfile(models.Model):
     user = models.OneToOneField(Author, on_delete=models.CASCADE, primary_key=True)
-    profile_picture = models.ImageField(upload_to=f'{user.id}/image/profile', null=True)
+    profile_picture = models.ImageField(
+        upload_to=get_user_profile_picture_upload_path,
+        null=True,
+    )
     bio = models.TextField(null=True)
 
     def __str__(self):
