@@ -8,7 +8,7 @@ from apps.utils.base_model import BaseModel
 
 
 def get_upload_path(instance, filename):
-    ext = filename.split('.')[-1].lstrip('.').lower()
+    ext = os.path.splitext(filename)[-1].lstrip('.').lower()
     file_type = instance._get_file_type(ext)
     return os.path.join(str(instance.post.author.id), file_type, filename)
 
@@ -20,7 +20,7 @@ class MediaFile(BaseModel):
         AUDIO = 'audio'
 
     valid_extensions = {
-        Type.IMAGE: ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'],
+        Type.IMAGE: ['jpg', 'jpeg', 'png', 'gif', 'webp'],
         Type.VIDEO: ['mp4', 'webm'],
         Type.AUDIO: ['mp3', 'aac', 'wav', 'ogg'],
     }
@@ -32,11 +32,8 @@ class MediaFile(BaseModel):
     name = models.CharField(max_length=255)
     type = models.CharField(choices=Type.choices, max_length=10)
     size = models.PositiveIntegerField()
-    width = models.PositiveIntegerField(null=True)
-    height = models.PositiveIntegerField(null=True)
-
-    def __str__(self):
-        return self.name
+    width = models.PositiveIntegerField(null=True, default=None)
+    height = models.PositiveIntegerField(null=True, default=None)
 
     def _get_file_type(self, ext):
         for file_type, extensions in self.valid_extensions.items():
@@ -54,13 +51,16 @@ class MediaFile(BaseModel):
     def save(self, *args, **kwargs):
         if self.file:
             self.name = os.path.basename(self.file.name)
-            ext = self.name.split('.')[-1].lstrip('.').lower()
+            ext = os.path.splitext(self.name)[-1].lstrip('.').lower()
             self.type = self._get_file_type(ext)
             self.size = self.file.size
 
             if self.type == self.Type.IMAGE:
                 self._extract_image_metadata()
             super().save(*args, **kwargs)
+
+    def __str__(self):
+        return self.name
 
     class Meta:
         verbose_name = 'Media File'
