@@ -8,6 +8,12 @@ from .tags import Tag
 
 
 class Post(BaseModel):
+    class Status(models.TextChoices):
+        DRAFT = 'draft'
+        PUBLISHED = 'published'
+        ARCHIVED = 'archived'
+        DELETED = 'deleted'
+
     author = models.ForeignKey(
         'users.User', on_delete=models.CASCADE, related_name='posts'
     )
@@ -18,6 +24,9 @@ class Post(BaseModel):
     title = models.CharField(max_length=51)
     slug = models.SlugField(max_length=51, unique=True, null=False)
     content = models.TextField()
+    status = models.CharField(
+        choices=Status.choices, max_length=10, default=Status.DRAFT
+    )
 
     def __str__(self):
         return self.title
