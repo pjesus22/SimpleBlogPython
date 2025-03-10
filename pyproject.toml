@@ -11,7 +11,10 @@ dependencies = [
 
 [dependency-groups]
 dev = [
+    "django-extensions>=3.2.3",
     "ipython>=9.0.1",
+    "pydot>=3.0.4",
+    "pyparsing>=3.2.1",
     "python-dotenv>=1.0.1",
     "ruff>=0.9.9",
 ]
