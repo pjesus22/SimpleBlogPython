@@ -20,7 +20,7 @@ class Post(BaseModel):
     category = models.ForeignKey(
         Category, on_delete=models.CASCADE, related_name='posts'
     )
-    tags = models.ManyToManyField(Tag, blank=True, related_name='post')
+    tags = models.ManyToManyField(Tag, blank=True, related_name='posts')
     title = models.CharField(max_length=51)
     slug = models.SlugField(max_length=51, unique=True, null=False)
     content = models.TextField()
