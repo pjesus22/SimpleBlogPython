@@ -29,11 +29,11 @@ class MediaFile(BaseModel):
     post = models.ForeignKey(
         'content.Post', on_delete=models.CASCADE, related_name='media_files'
     )
-    name = models.CharField(max_length=255)
-    type = models.CharField(choices=Type.choices, max_length=10)
-    size = models.PositiveIntegerField()
-    width = models.PositiveIntegerField(null=True, default=None)
-    height = models.PositiveIntegerField(null=True, default=None)
+    name = models.CharField(max_length=255, blank=True)
+    type = models.CharField(choices=Type.choices, max_length=10, blank=True)
+    size = models.PositiveIntegerField(blank=True)
+    width = models.PositiveIntegerField(null=True, blank=True, default=None)
+    height = models.PositiveIntegerField(null=True, blank=True, default=None)
 
     def _get_file_type(self, ext):
         for file_type, extensions in self.valid_extensions.items():
