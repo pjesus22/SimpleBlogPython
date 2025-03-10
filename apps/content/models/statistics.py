@@ -8,10 +8,16 @@ from .posts import Post
 
 
 class PostStatistics(BaseModel):
-    post = models.OneToOneField(Post, on_delete=models.CASCADE, primary_key=True)
+    post = models.OneToOneField(
+        Post, on_delete=models.CASCADE, primary_key=True, related_name='post_statistics'
+    )
     share_count = models.PositiveIntegerField(default=0)
     like_count = models.PositiveIntegerField(default=0)
     comment_count = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        verbose_name = 'Post Statistics'
+        verbose_name_plural = 'Post Statistics'
 
 
 @receiver(post_save, sender=Post)
