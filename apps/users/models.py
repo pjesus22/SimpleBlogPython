@@ -3,6 +3,8 @@ from django.db import models
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 
+from ..utils.base_model import BaseModel
+
 
 class User(AbstractUser):
     class Role(models.TextChoices):
@@ -32,6 +34,7 @@ class AdminManager(BaseUserManager):
 
 class Admin(User):
     objects = AdminManager()
+    is_superuser = True
 
     class Meta:
         proxy = True
@@ -55,7 +58,12 @@ def get_user_profile_picture_upload_path(instance, filename):
 
 
 class AuthorProfile(models.Model):
-    user = models.OneToOneField(Author, on_delete=models.CASCADE, primary_key=True)
+    user = models.OneToOneField(
+        Author,
+        on_delete=models.CASCADE,
+        primary_key=True,
+        related_name='profile',
+    )
     profile_picture = models.ImageField(
         upload_to=get_user_profile_picture_upload_path,
         null=True,
@@ -72,12 +80,13 @@ def create_author_profile(sender, instance, created, **kwargs):
         AuthorProfile.objects.create(user=instance)
 
 
-class SocialAccount(models.Model):
-    name = models.CharField(max_length=255)
+class SocialAccount(BaseModel):
+    provider = models.CharField(max_length=50)
+    username = models.CharField(max_length=255)
     url = models.URLField(unique=True)
     profile = models.ForeignKey(
         AuthorProfile, on_delete=models.CASCADE, related_name='social_accounts'
     )
 
     def __str__(self):
-        return self.name
+        return self.username
