@@ -55,6 +55,7 @@ class SocialAccountFactory(factory.django.DjangoModelFactory):
     class Meta:
         model = 'users.SocialAccount'
 
-    name = factory.Faker('company')
+    provider = factory.Faker('company')
+    username = factory.Faker('company')
     url = factory.Faker('url')
     profile = factory.SubFactory(AuthorProfileFactory)
