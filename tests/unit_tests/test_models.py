@@ -118,4 +118,7 @@ class TestUsers:
         self, social_account_factory, author_profile_inst, clean_media_dir
     ):
         social_account = social_account_factory.create(profile=author_profile_inst)
-        assert social_account.__str__() == social_account.name
+        assert (
+            social_account.__str__()
+            == f'{social_account.username} ({social_account.provider})'
+        )
