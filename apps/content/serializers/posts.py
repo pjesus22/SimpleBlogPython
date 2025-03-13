@@ -27,8 +27,8 @@ class PostSerializer:
     @staticmethod
     def _build_relationships(post):
         relationships = {
-            'author': {'data': [{'type': 'users', 'id': str(post.author.id)}]},
-            'category': {'data': [{'type': 'categories', 'id': str(post.category.id)}]},
+            'author': {'data': {'type': 'users', 'id': str(post.author.id)}},
+            'category': {'data': {'type': 'categories', 'id': str(post.category.id)}},
         }
 
         for rel in ['tags', 'media_files']:
