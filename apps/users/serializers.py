@@ -82,8 +82,8 @@ class UserSerializer:
     @staticmethod
     def _serialize_profile(profile):
         base_data = {
-            'type': 'author-profile',
-            'id': str(profile.user),
+            'type': 'author-profiles',
+            'id': str(profile.user.pk),
             'attributes': {
                 'bio': profile.bio,
                 'profile_picture': profile.profile_picture.name,
@@ -115,8 +115,8 @@ class UserSerializer:
                     'provider': social.provider,
                     'username': social.username,
                     'url': social.url,
-                    'created_at': social.created_at.isoformat(),
-                    'updated_at': social.updated_at.isoformat(),
+                    'created_at': social.created_at,
+                    'updated_at': social.updated_at,
                 },
             }
             for social in social_accounts
