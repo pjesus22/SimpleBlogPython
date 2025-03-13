@@ -1,19 +1,20 @@
-from django.http import JsonResponse
+from django.http import Http404, JsonResponse
 from django.views.generic import DetailView, ListView
 
 from ..models import Tag
-from ..serializers.tags import TagSerializer
+from ..serializers import TagSerializer
 
 
 class TagListView(ListView):
     model = Tag
     context_object_name = 'tags'
 
-    def render_to_response(self, context, **response_kwargs):
-        return JsonResponse(
-            {'data': [TagSerializer.serialize_tag(tag) for tag in context['tags']]},
-            safe=False,
-        )
+    def get(self, request, *args, **kwargs):
+        self.object_list = self.get_queryset()
+        context = self.get_context_data()
+        tags = context['tags']
+        response_data = {'data': [TagSerializer.serialize_tag(tag) for tag in tags]}
+        return JsonResponse(response_data, safe=False)
 
 
 class TagDetailView(DetailView):
@@ -21,12 +22,18 @@ class TagDetailView(DetailView):
     slug_field = 'slug'
     context_object_name = 'tag'
 
-    def render_to_response(self, context, **response_kwargs):
+    def get(self, request, *args, **kwargs):
+        try:
+            self.object = self.get_object()
+        except Tag.DoesNotExist:
+            raise Http404('Tag not found')
+
+        context = self.get_context_data()
         tag = context['tag']
+        response_data = {'data': TagSerializer.serialize_tag(tag)}
         included = TagSerializer.build_included_data(tag)
-        response_data = {
-            'data': TagSerializer.serialize_tag(tag),
-        }
+
         if included:
             response_data['included'] = included
+
         return JsonResponse(response_data)

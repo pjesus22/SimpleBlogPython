@@ -1,23 +1,22 @@
-from django.http import JsonResponse
+from django.http import Http404, JsonResponse
 from django.views.generic import DetailView, ListView
 
 from ..models import Post
-from ..serializers.post import PostSerializer
+from ..serializers import PostSerializer
 
 
 class PostListView(ListView):
     model = Post
     context_object_name = 'posts'
 
-    def render_to_response(self, context, **response_kwargs):
-        return JsonResponse(
-            {
-                'data': [
-                    PostSerializer.serialize_post(post) for post in context['posts']
-                ]
-            },
-            safe=False,
-        )
+    def get(self, request, *args, **kwargs):
+        self.object_list = self.get_queryset()
+        context = self.get_context_data()
+        posts = context['posts']
+        response_data = {
+            'data': [PostSerializer.serialize_post(post) for post in posts]
+        }
+        return JsonResponse(response_data, safe=False)
 
 
 class PostDetailView(DetailView):
@@ -25,10 +24,18 @@ class PostDetailView(DetailView):
     slug_field = 'slug'
     context_object_name = 'post'
 
-    def render_to_response(self, context, **response_kwargs):
+    def get(self, request, *args, **kwargs):
+        try:
+            self.object = self.get_object()
+        except Post.DoesNotExist:
+            raise Http404('Post not found')
+
+        context = self.get_context_data()
         post = context['post']
-        response_data = {
-            'data': PostSerializer.serialize_post(post),
-            'included': PostSerializer.build_included_data(post),
-        }
-        return JsonResponse(response_data, safe=False)
+        response_data = {'data': PostSerializer.serialize_post(post)}
+        included = PostSerializer.build_included_data(post)
+
+        if included:
+            response_data['included'] = included
+
+        return JsonResponse(response_data)
