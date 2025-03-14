@@ -30,8 +30,10 @@ class CategoryDetailView(DetailView):
     def get(self, request, *args, **kwargs):
         try:
             self.object = self.get_object()
-        except Category.DoesNotExist:
-            raise Http404('Category not found')
+        except Http404:
+            return JsonResponse(
+                {'error': f'Category {kwargs["slug"]} not found'}, status=404
+            )
 
         context = self.get_context_data()
         category = context['category']

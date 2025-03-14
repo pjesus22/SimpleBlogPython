@@ -27,8 +27,10 @@ class PostDetailView(DetailView):
     def get(self, request, *args, **kwargs):
         try:
             self.object = self.get_object()
-        except Post.DoesNotExist:
-            raise Http404('Post not found')
+        except Http404:
+            return JsonResponse(
+                {'error': f'Post {kwargs["slug"]} not found'}, status=404
+            )
 
         context = self.get_context_data()
         post = context['post']

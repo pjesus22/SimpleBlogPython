@@ -26,8 +26,10 @@ class UserDetailView(DetailView):
     def get(self, request, *args, **kwargs):
         try:
             self.object = self.get_object()
-        except User.DoesNotExist:
-            raise Http404('User not found')
+        except Http404:
+            return JsonResponse(
+                {'error': f'User with pk {kwargs["pk"]} not found'}, status=404
+            )
 
         context = self.get_context_data()
         user = context['user']

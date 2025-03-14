@@ -25,8 +25,10 @@ class TagDetailView(DetailView):
     def get(self, request, *args, **kwargs):
         try:
             self.object = self.get_object()
-        except Tag.DoesNotExist:
-            raise Http404('Tag not found')
+        except Http404:
+            return JsonResponse(
+                {'error': f'Tag {kwargs["slug"]} not found'}, status=404
+            )
 
         context = self.get_context_data()
         tag = context['tag']
