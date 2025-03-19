@@ -21,8 +21,8 @@ class Post(BaseModel):
         Category, on_delete=models.CASCADE, related_name='posts'
     )
     tags = models.ManyToManyField(Tag, blank=True, related_name='posts')
-    title = models.CharField(max_length=51)
-    slug = models.SlugField(max_length=51, unique=True, null=False)
+    title = models.CharField(max_length=50)
+    slug = models.SlugField(max_length=50, unique=True, null=False)
     content = models.TextField()
     status = models.CharField(
         choices=Status.choices, max_length=10, default=Status.DRAFT
@@ -31,7 +31,10 @@ class Post(BaseModel):
     def __str__(self):
         return self.title
 
-    def save(self, *args, **kwargs):
-        if not self.slug:
+    def clean(self, *args, **kwargs):
+        if not self.slug or self.slug != slugify(self.title):
             self.slug = slugify(self.title)
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
         super().save(*args, **kwargs)

@@ -48,16 +48,29 @@ class MediaFile(BaseModel):
         except Exception as e:
             raise ValidationError(f'Error extracting image metadata: {e}')
 
-    def save(self, *args, **kwargs):
-        if self.file:
-            self.name = os.path.basename(self.file.name)
-            ext = os.path.splitext(self.name)[-1].lstrip('.').lower()
-            self.type = self._get_file_type(ext)
-            self.size = self.file.size
+    def clean(self):
+        if (
+            MediaFile.objects.filter(post=self.post, name=self.name)
+            .exclude(pk=self.pk)
+            .exists()
+        ):
+            raise ValidationError(
+                {
+                    'file': f"A file with name '{self.name}' already exists for this post."
+                }
+            )
 
-            if self.type == self.Type.IMAGE:
-                self._extract_image_metadata()
-            super().save(*args, **kwargs)
+        self.name = os.path.basename(self.file.name)
+        ext = os.path.splitext(self.name)[-1].lstrip('.').lower()
+        self.type = self._get_file_type(ext)
+        self.size = self.file.size
+
+        if self.type == self.Type.IMAGE:
+            self._extract_image_metadata()
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return self.name
