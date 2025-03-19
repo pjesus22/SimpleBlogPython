@@ -1,4 +1,5 @@
 import factory
+from django.utils.text import slugify
 
 from apps.content.models import Post
 
@@ -18,6 +19,10 @@ class PostFactory(factory.django.DjangoModelFactory):
     status = factory.Faker(
         'random_element', elements=[x[0] for x in Post.Status.choices]
     )
+
+    @factory.lazy_attribute
+    def slug(self):
+        return slugify(self.title)
 
     @factory.post_generation
     def media_files(self, create, extracted, **kwargs):
