@@ -26,6 +26,7 @@ urlpatterns = [
             [
                 path('', include('apps.content.urls')),
                 path('', include('apps.users.urls')),
+                path('', include('apps.media_files.urls')),
             ]
         ),
     ),
