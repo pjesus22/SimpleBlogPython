@@ -5,6 +5,8 @@ from .views import (
     CategoryListView,
     PostDetailView,
     PostListView,
+    PostMediaFileDetailView,
+    PostMediaFileListView,
     TagDetailView,
     TagListView,
 )
@@ -18,4 +20,14 @@ urlpatterns = [
     path('tags/<str:slug>/', TagDetailView.as_view(), name='tag-detail'),
     path('posts/', PostListView.as_view(), name='post-list'),
     path('posts/<str:slug>/', PostDetailView.as_view(), name='post-detail'),
+    path(
+        'posts/<str:slug>/media/',
+        PostMediaFileListView.as_view(),
+        name='post-media-list',
+    ),
+    path(
+        'posts/media/<int:id>/',
+        PostMediaFileDetailView.as_view(),
+        name='post-media-detail',
+    ),
 ]
