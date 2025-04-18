@@ -5,7 +5,7 @@ from django.http import HttpResponse, JsonResponse
 from django.utils.decorators import method_decorator
 from django.views import View
 
-from apps.utils.permission_decorators import admin_required, login_required
+from apps.utils.decorators import admin_required, login_required
 
 from ..models import Tag
 from ..serializers import TagSerializer
@@ -27,14 +27,25 @@ class TagListView(View):
     def post(self, request, *args, **kwargs):
         try:
             data = json.loads(request.body)
+            allowed_fields = {'name'}
+            invalid_fields = set(data) - allowed_fields
+
+            if invalid_fields:
+                return JsonResponse(
+                    {'error': f'Invalid fields: {", ".join(invalid_fields)}'},
+                    status=400,
+                )
+
             tag = Tag(name=data.get('name'))
 
             tag.save()
-            return JsonResponse(TagSerializer.serialize_tag(tag), status=201)
+            return JsonResponse({'data': TagSerializer.serialize_tag(tag)}, status=201)
         except json.JSONDecodeError as e:
             return JsonResponse({'error': e.msg}, status=400)
         except ValidationError as e:
-            return JsonResponse({'error': e.messages}, status=400)
+            return JsonResponse({'error': str(e)}, status=400)
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
 
 
 class TagDetailView(View):
@@ -78,18 +89,22 @@ class TagDetailView(View):
             tag.name = data.get('name')
 
             tag.save()
-            return JsonResponse(TagSerializer.serialize_tag(tag), status=200)
+            return JsonResponse({'data': TagSerializer.serialize_tag(tag)}, status=200)
         except json.JSONDecodeError as e:
             return JsonResponse({'error': e.msg}, status=400)
         except ValidationError as e:
-            return JsonResponse({'error': e.messages}, status=400)
+            return JsonResponse({'error': str(e)}, status=400)
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
 
     @method_decorator([login_required, admin_required])
     def delete(self, request, *args, **kwargs):
-        tag = self.get_queryset()
+        try:
+            tag = self.get_object()
+            if not tag:
+                return HttpResponse(status=404)
 
-        if not tag:
-            return JsonResponse({'error': 'Tag not found'}, status=404)
-
-        tag.delete()
-        return HttpResponse(status=204)
+            tag.delete()
+            return HttpResponse(status=204)
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)

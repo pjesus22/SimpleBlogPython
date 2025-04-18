@@ -5,7 +5,7 @@ from django.http import HttpResponse, JsonResponse
 from django.utils.decorators import method_decorator
 from django.views import View
 
-from apps.utils.permission_decorators import admin_required, login_required
+from apps.utils.decorators import admin_required, login_required
 
 from ..models import Category
 from ..serializers import CategorySerializer
@@ -31,10 +31,11 @@ class CategoryListView(View):
         try:
             data = json.loads(request.body)
             allowed_fields = {'name', 'description'}
+            invalid_fields = set(data.keys()) - allowed_fields
 
-            if not set(data.keys()) <= allowed_fields:
+            if invalid_fields:
                 return JsonResponse(
-                    {'error': f'Invalid fields: {", ".join(data.keys())}'},
+                    {'error': f'Invalid fields: {", ".join(invalid_fields)}'},
                     status=400,
                 )
 
@@ -43,13 +44,14 @@ class CategoryListView(View):
             )
 
             category.save()
+
             return JsonResponse(
-                CategorySerializer.serialize_category(category), status=201
+                {'data': CategorySerializer.serialize_category(category)}, status=201
             )
         except json.JSONDecodeError as e:
             return JsonResponse({'error': e.msg}, status=400)
         except ValidationError as e:
-            return JsonResponse({'error': e.messages}, status=400)
+            return JsonResponse({'error': str(e)}, status=400)
         except Exception as e:
             return JsonResponse({'error': str(e)}, status=500)
 
@@ -83,7 +85,7 @@ class CategoryDetailView(View):
                 return JsonResponse({'error': 'Category not found'}, status=404)
 
             data = json.loads(request.body)
-            allowed_fields = {'description'}
+            allowed_fields = {'name', 'description'}
             invalid_fields = set(data) - allowed_fields
 
             if invalid_fields:
@@ -97,22 +99,22 @@ class CategoryDetailView(View):
 
             category.save()
             return JsonResponse(
-                CategorySerializer.serialize_category(category), status=200
+                {'data': CategorySerializer.serialize_category(category)}, status=200
             )
         except json.JSONDecodeError as e:
             return JsonResponse({'error': e.msg}, status=400)
         except ValidationError as e:
-            return JsonResponse({'error': e.messages}, status=400)
+            return JsonResponse({'error': str(e)}, status=400)
         except Exception as e:
             return JsonResponse({'error': str(e)}, status=500)
 
     @method_decorator([login_required, admin_required])
     def delete(self, request, *args, **kwargs):
         try:
-            category = self.get_queryset()
+            category = self.get_object()
 
             if not category:
-                return JsonResponse({'error': 'Category not found'}, status=404)
+                return HttpResponse(status=404)
 
             category.delete()
             return HttpResponse(status=204)

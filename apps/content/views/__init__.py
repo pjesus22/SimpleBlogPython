@@ -1,7 +1,10 @@
 from .categories import CategoryDetailView, CategoryListView
-from .post_detail import PostDetailView
-from .post_list import PostListView
-from .post_media import PostMediaFileDetailView, PostMediaFileListView
+from .posts import (
+    PostDetailView,
+    PostListView,
+    PostMediaFileDetailView,
+    PostMediaFileListView,
+)
 from .tags import TagDetailView, TagListView
 
 __all__ = [

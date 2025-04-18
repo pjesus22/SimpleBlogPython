@@ -5,9 +5,9 @@ from django.http import HttpResponse, JsonResponse
 from django.utils.decorators import method_decorator
 from django.views import View
 
-from ...utils.permission_decorators import admin_or_author_required, login_required
-from ..models import Category, Post, Tag
-from ..serializers import PostSerializer
+from apps.content.models import Category, Post, Tag
+from apps.content.serializers import PostSerializer
+from apps.utils.decorators import admin_or_author_required, login_required
 
 
 class PostDetailView(View):
@@ -64,8 +64,8 @@ class PostDetailView(View):
 
                 if invalid_tags:
                     return JsonResponse(
-                        {'error': f'Invalid tags: {", ".join(invalid_tags)}'},
-                        status=400,
+                        {'error': f'Tag not found: {", ".join(invalid_tags)}'},
+                        status=404,
                     )
 
                 post.tags.set(tags.values())
@@ -75,11 +75,13 @@ class PostDetailView(View):
                     setattr(post, field, data[field])
 
             post.save()
-            return JsonResponse(PostSerializer.serialize_post(post), status=200)
+            return JsonResponse(
+                {'data': PostSerializer.serialize_post(post)}, status=200
+            )
         except json.JSONDecodeError as e:
             return JsonResponse({'error': e.msg}, status=400)
         except ValidationError as e:
-            return JsonResponse({'error': e.messages}, status=400)
+            return JsonResponse({'error': str(e)}, status=400)
         except Exception as e:
             return JsonResponse({'error': str(e)}, status=500)
 

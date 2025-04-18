@@ -3,10 +3,10 @@ from django.http import HttpResponse, JsonResponse
 from django.utils.decorators import method_decorator
 from django.views import View
 
-from ...media_files.models import MediaFile
-from ...media_files.serializers import MediaFileSerializer
-from ...utils.permission_decorators import admin_or_author_required, login_required
-from ..models import Post
+from apps.content.models import Post
+from apps.media_files.models import MediaFile
+from apps.media_files.serializers import MediaFileSerializer
+from apps.utils.decorators import admin_or_author_required, login_required
 
 
 class PostMediaFileListView(View):
@@ -48,7 +48,7 @@ class PostMediaFileListView(View):
             serialized_data = MediaFileSerializer.serialize_media_files(media_files)
             return JsonResponse({'data': serialized_data}, status=201)
         except ValidationError as e:
-            return JsonResponse({'error': e.messages}, status=400)
+            return JsonResponse({'error': str(*e.messages)}, status=400)
         except Exception as e:
             return JsonResponse({'error': str(e)}, status=500)
 
@@ -63,7 +63,7 @@ class PostMediaFileDetailView(View):
         media_file = self.get_object()
 
         if not media_file:
-            return JsonResponse({'error': 'Media file not found'}, status=404)
+            return JsonResponse({'error': 'Media file item not found'}, status=404)
 
         serialized_data = MediaFileSerializer.serialize_media_file(media_file)
         return JsonResponse({'data': serialized_data})
@@ -74,7 +74,7 @@ class PostMediaFileDetailView(View):
             media_file = self.get_object()
 
             if not media_file:
-                return JsonResponse({'error': 'Media file not found'}, status=404)
+                return JsonResponse({'error': 'Media file item not found'}, status=404)
 
             if not (
                 request.user.role == 'admin'

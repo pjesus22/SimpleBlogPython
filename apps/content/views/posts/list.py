@@ -1,4 +1,5 @@
 import json
+import re
 
 from django.core.exceptions import ValidationError
 from django.db.models import Q
@@ -6,9 +7,10 @@ from django.http import JsonResponse
 from django.utils.decorators import method_decorator
 from django.views import View
 
-from ...utils.permission_decorators import admin_or_author_required, login_required
-from ..models import Category, Post, Tag
-from ..serializers import PostSerializer
+from apps.content.models import Category, Post, Tag
+from apps.content.serializers import PostSerializer
+from apps.utils.decorators import admin_or_author_required, login_required
+from apps.utils.text import normalize_text
 
 
 class PostListView(View):
@@ -16,27 +18,25 @@ class PostListView(View):
 
     def get_queryset(self, *args, **kwargs):
         queryset = Post.objects.all()
-
+        # Filtering
         category = self.request.GET.get('category')
-        title = self.request.GET.get('title')
         tags = self.request.GET.get('tags')
         search = self.request.GET.get('search')
 
         if category:
             queryset = queryset.filter(category__slug=category)
 
-        if title:
-            queryset = queryset.filter(title__icontains=title)
-
         if tags:
             tag_slugs = tags.split(',')
             queryset = queryset.filter(tags__slug__in=tag_slugs).distinct()
 
         if search:
-            queryset = queryset.filter(
-                Q(title__icontains=search) | Q(content__icontains=search)
-            )
-
+            search_normalized = normalize_text(search)
+            keywords = re.findall(r'\w+', search_normalized)
+            query = Q()
+            for keyword in keywords:
+                query |= Q(title__icontains=keyword)
+            queryset = queryset.filter(query)
         return queryset
 
     def get(self, request, *args, **kwargs):
@@ -58,8 +58,9 @@ class PostListView(View):
                     {'error': f'Invalid fields: {", ".join(invalid_fields)}'},
                     status=400,
                 )
-
             category_slug = data.get('category')
+            if not category_slug:
+                return JsonResponse({'error': 'Category is required'}, status=400)
             category = Category.objects.filter(slug=category_slug).first()
 
             if not category:
@@ -79,17 +80,19 @@ class PostListView(View):
 
             if invalid_tags:
                 return JsonResponse(
-                    {'error': f'Invalid tags: {", ".join(invalid_tags)}'},
-                    status=400,
+                    {'error': f'Tags not found: {", ".join(invalid_tags)}'},
+                    status=404,
                 )
 
             post.save()
             if tags:
                 post.tags.set(tags.values())
-            return JsonResponse(PostSerializer.serialize_post(post), status=201)
+            return JsonResponse(
+                {'data': PostSerializer.serialize_post(post)}, status=201
+            )
         except json.JSONDecodeError as e:
             return JsonResponse({'error': e.msg}, status=400)
         except ValidationError as e:
-            return JsonResponse({'errors': e.messages}, status=400)
+            return JsonResponse({'error': str(e)}, status=400)
         except Exception as e:
             return JsonResponse({'error': str(e)}, status=500)
