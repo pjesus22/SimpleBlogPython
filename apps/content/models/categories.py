@@ -12,11 +12,12 @@ class Category(BaseModel):
     def __str__(self):
         return self.name
 
-    def clean(self, *args, **kwargs):
+    def full_clean(self, *args, **kwargs):
         if not self.slug or self.slug != slugify(self.name):
             self.slug = slugify(self.name)
+        super().full_clean(*args, **kwargs)
 
-    def save(self, *args, **kwargs):
+    def save(self, *args, **kwargs) -> None:
         self.full_clean()
         super().save(*args, **kwargs)
 

@@ -31,9 +31,10 @@ class Post(BaseModel):
     def __str__(self):
         return self.title
 
-    def clean(self, *args, **kwargs):
+    def full_clean(self, *args, **kwargs):
         if not self.slug or self.slug != slugify(self.title):
             self.slug = slugify(self.title)
+        super().full_clean(*args, **kwargs)
 
     def save(self, *args, **kwargs):
         self.full_clean()
