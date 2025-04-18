@@ -29,3 +29,20 @@ def login_required(func: callable):
         return func(request, *args, **kwargs)
 
     return wrapper
+
+
+def require_http_methods_json_response(allowed_methods: list[str]):
+    def decorator(func):
+        @wraps(func)
+        def wrapper(request, *args, **kwargs):
+            if request.method not in allowed_methods:
+                return JsonResponse(
+                    {'error': 'Method not allowed'},
+                    status=405,
+                    content_type='application/vnd.api+json',
+                )
+            return func(request, *args, **kwargs)
+
+        return wrapper
+
+    return decorator
