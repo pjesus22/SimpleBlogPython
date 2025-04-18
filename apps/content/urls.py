@@ -26,7 +26,7 @@ urlpatterns = [
         name='post-media-list',
     ),
     path(
-        'posts/media/<int:id>/',
+        'posts/<str:slug>/media/<int:id>/',
         PostMediaFileDetailView.as_view(),
         name='post-media-detail',
     ),
