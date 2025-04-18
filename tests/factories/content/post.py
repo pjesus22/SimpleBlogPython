@@ -14,15 +14,12 @@ class PostFactory(factory.django.DjangoModelFactory):
 
     author = factory.SubFactory(AuthorFactory)
     category = factory.SubFactory(CategoryFactory)
-    title = factory.Faker('sentence', nb_words=6)
+    title = factory.Faker('text', max_nb_chars=50)
     content = factory.Faker('text', max_nb_chars=500)
     status = factory.Faker(
         'random_element', elements=[x[0] for x in Post.Status.choices]
     )
-
-    @factory.lazy_attribute
-    def slug(self):
-        return slugify(self.title)
+    slug = factory.LazyAttribute(lambda o: slugify(o.title))
 
     @factory.post_generation
     def media_files(self, create, extracted, **kwargs):
