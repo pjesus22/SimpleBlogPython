@@ -25,7 +25,9 @@ version = "0.1.0"
 source = { virtual = "." }
 dependencies = [
     { name = "django" },
+    { name = "gunicorn" },
     { name = "pillow" },
+    { name = "python-dotenv" },
 ]
 
 [package.dev-dependencies]
@@ -34,7 +36,6 @@ dev = [
     { name = "ipython" },
     { name = "pydot" },
     { name = "pyparsing" },
-    { name = "python-dotenv" },
     { name = "ruff" },
 ]
 test = [
@@ -47,7 +48,9 @@ test = [
 [package.metadata]
 requires-dist = [
     { name = "django", specifier = ">=5.1.6" },
+    { name = "gunicorn", specifier = ">=23.0.0" },
     { name = "pillow", specifier = ">=11.1.0" },
+    { name = "python-dotenv", specifier = ">=1.1.0" },
 ]
 
 [package.metadata.requires-dev]
@@ -56,7 +59,6 @@ dev = [
     { name = "ipython", specifier = ">=9.0.1" },
     { name = "pydot", specifier = ">=3.0.4" },
     { name = "pyparsing", specifier = ">=3.2.1" },
-    { name = "python-dotenv", specifier = ">=1.0.1" },
     { name = "ruff", specifier = ">=0.9.9" },
 ]
 test = [
@@ -180,6 +182,18 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/55/8f/40d002bed58bd6b79bf970505582b769fc975afcacc62c2fe1518d5729c2/faker-36.1.1.tar.gz", hash = "sha256:7cb2bbd4c8f040e4a340ae4019e9a48b6cf1db6a71bda4e5a61d8d13b7bef28d", size = 1874935 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/65/79/e13ae542f63ce40d02b0fe63809563b102f19ffa3b94e6062ee9286a7801/Faker-36.1.1-py3-none-any.whl", hash = "sha256:ad1f1be7fd692ec0256517404a9d7f007ab36ac5d4674082fa72404049725eaa", size = 1917865 },
+]
+
+[[package]]
+name = "gunicorn"
+version = "23.0.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "packaging" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/34/72/9614c465dc206155d93eff0ca20d42e1e35afc533971379482de953521a4/gunicorn-23.0.0.tar.gz", hash = "sha256:f014447a0101dc57e294f6c18ca6b40227a4c90e9bdb586042628030cba004ec", size = 375031 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/cb/7d/6dac2a6e1eba33ee43f318edbed4ff29151a49b5d37f080aad1e6469bca4/gunicorn-23.0.0-py3-none-any.whl", hash = "sha256:ec400d38950de4dfd418cff8328b2c8faed0edb0d517d3394e457c317908ca4d", size = 85029 },
 ]
 
 [[package]]
@@ -439,11 +453,11 @@ wheels = [
 
 [[package]]
 name = "python-dotenv"
-version = "1.0.1"
+version = "1.1.0"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/bc/57/e84d88dfe0aec03b7a2d4327012c1627ab5f03652216c63d49846d7a6c58/python-dotenv-1.0.1.tar.gz", hash = "sha256:e324ee90a023d808f1959c46bcbc04446a10ced277783dc6ee09987c37ec10ca", size = 39115 }
+sdist = { url = "https://files.pythonhosted.org/packages/88/2c/7bb1416c5620485aa793f2de31d3df393d3686aa8a8506d11e10e13c5baf/python_dotenv-1.1.0.tar.gz", hash = "sha256:41f90bc6f5f177fb41f53e87666db362025010eb28f60a01c9143bfa33a2b2d5", size = 39920 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/6a/3e/b68c118422ec867fa7ab88444e1274aa40681c606d59ac27de5a5588f082/python_dotenv-1.0.1-py3-none-any.whl", hash = "sha256:f7b63ef50f1b690dddf550d03497b66d609393b40b564ed0d674909a68ebf16a", size = 19863 },
+    { url = "https://files.pythonhosted.org/packages/1e/18/98a99ad95133c6a6e2005fe89faedf294a748bd5dc803008059409ac9b1e/python_dotenv-1.1.0-py3-none-any.whl", hash = "sha256:d7c01d9e2293916c18baf562d95698754b0dbbb5e74d457c45d4f6561fb9d55d", size = 20256 },
 ]
 
 [[package]]
