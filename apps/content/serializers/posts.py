@@ -11,9 +11,6 @@ class PostSerializer:
                 **model_to_dict(
                     post, exclude=['id', 'author', 'category', 'tags', 'media_files']
                 ),
-                'post_statistics': model_to_dict(
-                    post.post_statistics, exclude=['post']
-                ),
                 'created_at': post.created_at,
                 'updated_at': post.updated_at,
             },
@@ -29,6 +26,7 @@ class PostSerializer:
         relationships = {
             'author': {'data': {'type': 'users', 'id': str(post.author.id)}},
             'category': {'data': {'type': 'categories', 'id': str(post.category.id)}},
+            'statistics': {'data': {'type': 'post-statistics', 'id': str(post.id)}},
         }
 
         for rel in ['tags', 'media_files']:
@@ -49,6 +47,7 @@ class PostSerializer:
             [
                 PostSerializer._serialize_related_user(post.author),
                 PostSerializer._serialize_category(post.category),
+                PostSerializer._serialize_statistics(post.post_statistics),
             ]
         )
 
@@ -74,6 +73,17 @@ class PostSerializer:
         }
         data['attributes'].update(
             {'created_at': category.created_at, 'updated_at': category.updated_at}
+        )
+        return data
+
+    def _serialize_statistics(statistics):
+        data = {
+            'type': 'post-statistics',
+            'id': str(statistics.post.id),
+            'attributes': model_to_dict(statistics, exclude=['post']),
+        }
+        data['attributes'].update(
+            {'created_at': statistics.created_at, 'updated_at': statistics.updated_at}
         )
         return data
 
