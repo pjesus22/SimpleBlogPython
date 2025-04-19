@@ -1,8 +1,10 @@
 import shutil
+from contextlib import contextmanager
 from pathlib import Path
 
 import pytest
 from django.conf import settings
+from django.test import Client
 from pytest_factoryboy import register
 
 from .factories import (
@@ -43,3 +45,43 @@ def clean_media_dir():
                     shutil.rmtree(item)
             except Exception as e:
                 print(f'Error removing file: {e}')
+
+
+@pytest.fixture
+def csrf_client():
+    client = Client(enforce_csrf_checks=True)
+    return client
+
+
+@pytest.fixture
+def logged_admin_client(admin_factory, csrf_client):
+    user = admin_factory.create(username='test-admin')
+    csrf_client.force_login(user)
+    response = csrf_client.get('/api/v1/auth/csrf-token/')
+    csrf_token = response.cookies['csrftoken'].value
+    csrf_client.defaults['HTTP_X_CSRFTOKEN'] = csrf_token
+    return csrf_client
+
+
+@pytest.fixture
+def logged_author_client(author_factory, csrf_client):
+    user = author_factory.create(username='test-author')
+    csrf_client.force_login(user)
+    response = csrf_client.get('/api/v1/auth/csrf-token/')
+    csrf_token = response.cookies['csrftoken'].value
+    csrf_client.defaults['HTTP_X_CSRFTOKEN'] = csrf_token
+    return csrf_client
+
+
+@pytest.fixture
+def override():
+    @contextmanager
+    def _override(obj, method_name, new_method):
+        original = getattr(obj, method_name)
+        setattr(obj, method_name, new_method)
+        try:
+            yield
+        finally:
+            setattr(obj, method_name, original)
+
+    return _override
