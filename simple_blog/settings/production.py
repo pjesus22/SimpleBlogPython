@@ -1,8 +1,23 @@
-from .base import *  # NOQA F403
+from .base import *  # NOQA 403
+import os
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db_production.sqlite3',  # NOQA F405
-    }
-}
+DEBUG = False
+
+
+CSRF_COOKIE_SECURE = os.getenv('CSRF_COOKIE_SECURE', True)
+CSRF_COOKIE_HTTPONLY = False
+
+SESSION_COOKIE_SECURE = os.getenv('SESSION_COOKIE_SECURE', True)
+SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SAMESITE = 'Lax'
+
+SECURE_SSL_REDIRECT = os.getenv('SECURE_SSL_REDIRECT', True)
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+SECURE_HSTS_SECONDS = os.getenv('SECURE_HSTS_SECONDS', 31536000)
+SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+SECURE_HSTS_PRELOAD = True
+
+# Rate limiting settings
+# These values can be used in custom middleware
+RATELIMIT_ANONYMOUS = os.getenv('RATELIMIT_ANONYMOUS', '20/minute')
+RATELIMIT_AUTHENTICATED = os.getenv('RATELIMIT_AUTHENTICATED', '100/minute')
