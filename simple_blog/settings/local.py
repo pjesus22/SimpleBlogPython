@@ -1,12 +1,17 @@
-from .base import *  # NOQA F403
+from .base import *  # NOQA 403
 
-INSTALLED_APPS += [  # NOQA F405
+DEBUG = True
+ALLOWED_HOSTS = ['*']
+
+INSTALLED_APPS += [  # NOQA 405
     'django_extensions',
 ]
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db_testing.sqlite3',  # NOQA F405
-    }
-}
+
+CSRF_COOKIE_SECURE = False
+CSRF_COOKIE_HTTPONLY = False
+
+SESSION_COOKIE_SECURE = False
+SESSION_COOKIE_HTTPONLY = True
+
+SECURE_SSL_REDIRECT = False
