@@ -1,6 +1,7 @@
 [project]
 name = "simple_blog"
 version = "0.1.0"
+license = "MIT"
 description = "A robust Django-based blog API with secure authentication, HTTPS support, and Docker deployment configuration."
 readme = "README.md"
 requires-python = ">=3.12"
