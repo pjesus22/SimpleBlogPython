@@ -1,0 +1,58 @@
+services:
+  web:
+    build: .
+    container_name: simple_blog_app
+    env_file: .env.production
+    volumes:
+      - simple_blog_data:/var/data
+      - simple_blog_static:/var/www/static
+      - simple_blog_media:/var/www/media
+    expose:
+      - "8000"
+    restart: unless-stopped
+
+  nginx:
+    image: nginx:1.25-alpine
+    container_name: simple_blog_nginx
+    depends_on:
+      - web
+      - certgen
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/certs:/etc/nginx/certs:ro
+      - simple_blog_static:/var/www/static:ro
+      - simple_blog_media:/var/www/media:ro
+      # ./nginx/www:/var/www/certbot
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Self-signed certificate generation (default)
+  certgen:
+    image: alpine:latest
+    container_name: certgen
+    volumes:
+      - ./nginx/certs:/certs
+    command: sh -c "apk add --no-cache openssl && openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout /certs/nginx.key -out /certs/nginx.crt -subj '/CN=localhost'"
+
+  # Let's Encrypt with Certbot (optional)
+  # Uncomment and modify the following service to use Let's Encrypt
+  # certbot:
+  #   image: certbot/certbot
+  #   container_name: certbot
+  #   volumes:
+  #     - ./nginx/certs:/etc/letsencrypt
+  #     - ./nginx/www:/var/www/certbot
+  #   command: certonly --webroot --webroot-path=/var/www/certbot --email your@email.com --agree-tos --no-eff-email --force-renewal -d yourdomain.com
+  #   entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
+
+volumes:
+  simple_blog_data:
+  simple_blog_static:
+  simple_blog_media:
