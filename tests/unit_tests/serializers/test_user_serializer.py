@@ -68,7 +68,7 @@ def test_build_included_data_includes_correct_post_details(user_inst):
         }
         for post in user_inst.posts.all()
     ]
-    expected_profile = {  # NOQA F841
+    expected_profile = {  # NOQA: F841
         'type': 'author-profiles',
         'id': str(user_inst.profile.pk),
         'attributes': {

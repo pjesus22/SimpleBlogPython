@@ -25,7 +25,7 @@ def post_inst(
         tags=tags,
         media_files=media_files,
     )
-    post_statistics = post_statistics_factory(post=post)  # NOQA F841
+    post_statistics = post_statistics_factory(post=post)  # NOQA: F841
     return post
 
 
@@ -43,7 +43,7 @@ def post_inst_without_tags_or_media_files(
         author=user,
         category=category,
     )
-    post_statistics = post_statistics_factory(post=post)  # NOQA F841
+    post_statistics = post_statistics_factory(post=post)  # NOQA: F841
     return post
 
 

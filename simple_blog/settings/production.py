@@ -1,5 +1,6 @@
-from .base import *  # NOQA 403
 import os
+
+from .base import *  # NOQA: F403
 
 DEBUG = False
 

@@ -1,9 +1,9 @@
-from .base import *  # NOQA 403
+from .base import *  # noqa: F403, F405
 
 DEBUG = True
 ALLOWED_HOSTS = ['*']
 
-INSTALLED_APPS += [  # NOQA 405
+INSTALLED_APPS += [  # noqa: F405
     'django_extensions',
 ]
 
