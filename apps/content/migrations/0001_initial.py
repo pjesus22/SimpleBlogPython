@@ -5,17 +5,23 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     initial = True
 
-    dependencies = [
-    ]
+    dependencies = []
 
     operations = [
         migrations.CreateModel(
             name='Category',
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                (
+                    'id',
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name='ID',
+                    ),
+                ),
                 ('created_at', models.DateTimeField(auto_now_add=True)),
                 ('updated_at', models.DateTimeField(auto_now=True)),
                 ('name', models.CharField(max_length=51)),
@@ -30,13 +36,33 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='Post',
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                (
+                    'id',
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name='ID',
+                    ),
+                ),
                 ('created_at', models.DateTimeField(auto_now_add=True)),
                 ('updated_at', models.DateTimeField(auto_now=True)),
                 ('title', models.CharField(max_length=51)),
                 ('slug', models.SlugField(max_length=51, unique=True)),
                 ('content', models.TextField()),
-                ('status', models.CharField(choices=[('draft', 'Draft'), ('published', 'Published'), ('archived', 'Archived'), ('deleted', 'Deleted')], default='draft', max_length=10)),
+                (
+                    'status',
+                    models.CharField(
+                        choices=[
+                            ('draft', 'Draft'),
+                            ('published', 'Published'),
+                            ('archived', 'Archived'),
+                            ('deleted', 'Deleted'),
+                        ],
+                        default='draft',
+                        max_length=10,
+                    ),
+                ),
             ],
             options={
                 'ordering': ['-created_at', '-updated_at'],
@@ -47,7 +73,15 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='Tag',
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                (
+                    'id',
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name='ID',
+                    ),
+                ),
                 ('created_at', models.DateTimeField(auto_now_add=True)),
                 ('updated_at', models.DateTimeField(auto_now=True)),
                 ('name', models.CharField(max_length=51)),
@@ -62,7 +96,16 @@ class Migration(migrations.Migration):
             fields=[
                 ('created_at', models.DateTimeField(auto_now_add=True)),
                 ('updated_at', models.DateTimeField(auto_now=True)),
-                ('post', models.OneToOneField(on_delete=django.db.models.deletion.CASCADE, primary_key=True, related_name='post_statistics', serialize=False, to='content.post')),
+                (
+                    'post',
+                    models.OneToOneField(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        primary_key=True,
+                        related_name='post_statistics',
+                        serialize=False,
+                        to='content.post',
+                    ),
+                ),
                 ('share_count', models.PositiveIntegerField(default=0)),
                 ('like_count', models.PositiveIntegerField(default=0)),
                 ('comment_count', models.PositiveIntegerField(default=0)),

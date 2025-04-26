@@ -6,7 +6,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     initial = True
 
     dependencies = [
@@ -17,16 +16,51 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='MediaFile',
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                (
+                    'id',
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name='ID',
+                    ),
+                ),
                 ('created_at', models.DateTimeField(auto_now_add=True)),
                 ('updated_at', models.DateTimeField(auto_now=True)),
-                ('file', models.FileField(upload_to=apps.media_files.models.get_upload_path)),
+                (
+                    'file',
+                    models.FileField(upload_to=apps.media_files.models.get_upload_path),
+                ),
                 ('name', models.CharField(blank=True, max_length=255)),
-                ('type', models.CharField(blank=True, choices=[('image', 'Image'), ('video', 'Video'), ('audio', 'Audio')], max_length=10)),
+                (
+                    'type',
+                    models.CharField(
+                        blank=True,
+                        choices=[
+                            ('image', 'Image'),
+                            ('video', 'Video'),
+                            ('audio', 'Audio'),
+                        ],
+                        max_length=10,
+                    ),
+                ),
                 ('size', models.PositiveIntegerField(blank=True)),
-                ('width', models.PositiveIntegerField(blank=True, default=None, null=True)),
-                ('height', models.PositiveIntegerField(blank=True, default=None, null=True)),
-                ('post', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='media_files', to='content.post')),
+                (
+                    'width',
+                    models.PositiveIntegerField(blank=True, default=None, null=True),
+                ),
+                (
+                    'height',
+                    models.PositiveIntegerField(blank=True, default=None, null=True),
+                ),
+                (
+                    'post',
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name='media_files',
+                        to='content.post',
+                    ),
+                ),
             ],
             options={
                 'verbose_name': 'Media File',
