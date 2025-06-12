@@ -19,4 +19,7 @@ WORKDIR /app
 COPY --from=builder --chown=app:app /app /app
 USER app
 ENV PATH="/app/.venv/bin:$PATH"
+COPY --chown=app:app docker-entrypoint.sh /app/
+RUN chmod +x /app/docker-entrypoint.sh
+ENTRYPOINT ["/app/docker-entrypoint.sh"]
 CMD ["gunicorn", "simple_blog.wsgi:application", "-c", "gunicorn.conf.py"]
