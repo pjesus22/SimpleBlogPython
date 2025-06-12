@@ -2,7 +2,7 @@
 # See https://pre-commit.com/hooks.html for more hooks
 repos:
 -   repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.5.0
+    rev: v5.0.0
     hooks:
     -   id: trailing-whitespace
     -   id: end-of-file-fixer
@@ -16,7 +16,7 @@ repos:
     -   id: detect-private-key
 
 -   repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.3.3
+    rev: v0.11.13
     hooks:
     -   id: ruff
         args: [--fix, --exit-non-zero-on-fix]
@@ -37,6 +37,7 @@ repos:
 
 # Safety checks for security vulnerabilities in Python dependencies
 -   repo: https://github.com/pypa/pip-audit
-    rev: v2.6.1
+    rev: v2.9.0
     hooks:
     -   id: pip-audit
+        verbose: true
