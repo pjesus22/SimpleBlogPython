@@ -39,3 +39,6 @@ class Post(BaseModel):
     def save(self, *args, **kwargs):
         self.full_clean()
         super().save(*args, **kwargs)
+
+    def is_public(self) -> bool:
+        return self.status == self.Status.PUBLISHED
