@@ -10,7 +10,7 @@ from apps.utils.base_model import BaseModel
 def get_upload_path(instance, filename):
     ext = os.path.splitext(filename)[-1].lstrip('.').lower()
     file_type = instance._get_file_type(ext)
-    return os.path.join(str(instance.post.author.id), file_type, filename)
+    return os.path.join(file_type, filename)
 
 
 class MediaFile(BaseModel):
