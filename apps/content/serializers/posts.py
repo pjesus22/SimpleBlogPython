@@ -116,12 +116,8 @@ class PostSerializer:
                 'type': 'media_files',
                 'id': str(media_file.id),
                 'attributes': {
-                    'file': media_file.file.name,
-                    'name': media_file.name,
+                    'file': media_file.file.url,
                     'type': media_file.type,
-                    'size': media_file.size,
-                    'width': media_file.width,
-                    'height': media_file.height,
                     'created_at': media_file.created_at,
                     'updated_at': media_file.updated_at,
                 },
