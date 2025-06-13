@@ -17,6 +17,7 @@ class UserSerializer:
                         'last_name',
                         'role',
                         'is_active',
+                        'date_joined',
                     ],
                 ),
             },
