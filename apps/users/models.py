@@ -35,6 +35,7 @@ class AdminManager(BaseUserManager):
 class Admin(User):
     objects = AdminManager()
     is_superuser = True
+    is_staff = True
 
     class Meta:
         proxy = True
@@ -65,10 +66,11 @@ class AuthorProfile(models.Model):
         related_name='profile',
     )
     profile_picture = models.ImageField(
-        upload_to=get_user_profile_picture_upload_path,
+        upload_to='profiles/',
+        blank=True,
         null=True,
     )
-    bio = models.TextField(null=True)
+    bio = models.TextField()
 
     def __str__(self):
         return f'{self.user.username} ({self.user.role}) profile'
