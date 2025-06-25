@@ -42,3 +42,9 @@ class Post(BaseModel):
 
     def is_public(self) -> bool:
         return self.status == self.Status.PUBLISHED
+
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = 'Post'
+        verbose_name_plural = 'Posts'
+        unique_together = ('author', 'slug')
