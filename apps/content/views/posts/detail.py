@@ -1,102 +1,96 @@
 import json
 
 from django.core.exceptions import ValidationError
-from django.http import HttpResponse, JsonResponse
+from django.http import Http404, JsonResponse
+from django.shortcuts import get_object_or_404
 from django.utils.decorators import method_decorator
 from django.views import View
 
-from apps.content.models import Category, Post, Tag
+from apps.content.models import Category, Post
 from apps.content.serializers import PostSerializer
 from apps.utils.decorators import admin_or_author_required, login_required
+from apps.utils.jsonapi_responses import JsonApiResponseBuilder as jarb
+from apps.utils.validators import get_valid_tags_or_404, validate_invalid_fields
 
 
 class PostDetailView(View):
     http_method_names = ['get', 'patch', 'put', 'delete', 'head', 'options']
 
-    def get_object(self):
-        return Post.objects.filter(slug=self.kwargs.get('slug')).first()
-
     def get(self, request, *args, **kwargs):
-        post = self.get_object()
+        try:
+            post = get_object_or_404(Post, slug=self.kwargs.get('slug'))
+            data = PostSerializer.serialize_post(post)
 
-        if not post:
-            return JsonResponse({'error': 'Post not found'}, status=404)
+            if data['relationships']:
+                data['included'] = PostSerializer.build_included_data(post)
 
-        response_data = {'data': PostSerializer.serialize_post(post)}
-        included = PostSerializer.build_included_data(post)
+            if post.is_public():
+                return jarb.ok(data)
 
-        if included:
-            response_data['included'] = included
+            if request.user.is_authenticated and (
+                request.user.role == 'admin' or request.user.id == post.author.id
+            ):
+                return jarb.ok(data)
 
-        return JsonResponse(response_data)
+            else:
+                return jarb.error(
+                    403, 'Forbidden', 'You do not have permission to view this post'
+                )
+        except Http404 as e:
+            return jarb.error(404, 'Not Found', str(e))
+        except Exception as e:
+            return jarb.error(500, 'Internal Server Error', str(e))
 
     @method_decorator([login_required, admin_or_author_required])
     def patch(self, request, *args, **kwargs):
         try:
-            post = self.get_object()
-
-            if not post:
-                return JsonResponse({'error': 'Post not found'}, status=404)
-
+            post = get_object_or_404(Post, slug=self.kwargs.get('slug'))
             if not (request.user.role == 'admin' or request.user.id == post.author.id):
-                return JsonResponse({'error': 'Permission denied'}, status=403)
-
-            data = json.loads(request.body)
-            allowed_fields = {'title', 'content', 'category', 'tags', 'status'}
-            invalid_fields = set(data) - allowed_fields
-
-            if invalid_fields:
-                return JsonResponse(
-                    {'error': f'Invalid fields: {", ".join(invalid_fields)}'},
-                    status=400,
+                return jarb.error(
+                    403, 'Forbidden', 'You do not have permission to edit this post'
                 )
+            data = json.loads(request.body)
+
+            allowed_fields = {'title', 'content', 'category', 'tags', 'status'}
+            validate_invalid_fields(data, allowed_fields)
 
             if 'category' in data:
-                category = Category.objects.filter(slug=data['category']).first()
-                if not category:
-                    return JsonResponse({'error': 'Category not found'}, status=404)
+                category = get_object_or_404(Category, slug=data['category'])
                 post.category = category
 
             if 'tags' in data:
-                tag_slugs = set(data['tags'])
-                tags = {tag.slug: tag for tag in Tag.objects.filter(slug__in=tag_slugs)}
-                invalid_tags = tag_slugs - tags.keys()
-
-                if invalid_tags:
-                    return JsonResponse(
-                        {'error': f'Tag not found: {", ".join(invalid_tags)}'},
-                        status=404,
-                    )
-
+                tags = get_valid_tags_or_404(data['tags'])
                 post.tags.set(tags.values())
 
-            for field in allowed_fields - {'category', 'tags'}:
-                if field in data:
-                    setattr(post, field, data[field])
+            for field, value in {
+                k: v for k, v in data.items() if k not in {'category', 'tags'}
+            }.items():
+                if value in ['', None]:
+                    raise ValidationError(...)
+                setattr(post, field, value)
 
             post.save()
-            return JsonResponse(
-                {'data': PostSerializer.serialize_post(post)}, status=200
-            )
-        except json.JSONDecodeError as e:
-            return JsonResponse({'error': e.msg}, status=400)
-        except ValidationError as e:
-            return JsonResponse({'error': str(e)}, status=400)
+            return jarb.ok(PostSerializer.serialize_post(post))
+        except (json.JSONDecodeError, ValidationError, ValueError) as e:
+            return jarb.error(400, 'Bad Request', str(e))
+        except Http404 as e:
+            return jarb.error(404, 'Not Found', str(e))
         except Exception as e:
-            return JsonResponse({'error': str(e)}, status=500)
+            return jarb.error(500, 'Internal Server Error', str(e))
 
     @method_decorator([login_required, admin_or_author_required])
     def delete(self, request, *args, **kwargs):
         try:
-            post = self.get_object()
-
-            if not post:
-                return JsonResponse({'error': 'Post not found'}, status=404)
+            post = get_object_or_404(Post, slug=self.kwargs.get('slug'))
 
             if not (request.user.role == 'admin' or request.user.id == post.author.id):
-                return JsonResponse({'error': 'Permission denied'}, status=403)
+                return jarb.error(
+                    403, 'Forbidden', 'You do not have permission to delete this post'
+                )
 
             post.delete()
-            return HttpResponse(status=204)
+            return jarb.no_content()
+        except Http404 as e:
+            return jarb.error(404, 'Not Found', str(e))
         except Exception as e:
             return JsonResponse({'error': str(e)}, status=500)
