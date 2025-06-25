@@ -1,70 +1,69 @@
 import json
-import re
 
 from django.core.exceptions import ValidationError
-from django.db.models import Q
-from django.http import JsonResponse
+from django.http import Http404
+from django.shortcuts import get_object_or_404
 from django.utils.decorators import method_decorator
 from django.views import View
 
-from apps.content.models import Category, Post, Tag
+from apps.content.models import Category, Post
 from apps.content.serializers import PostSerializer
 from apps.utils.decorators import admin_or_author_required, login_required
-from apps.utils.text import normalize_text
+from apps.utils.jsonapi_responses import JsonApiResponseBuilder as jarb
+from apps.utils.query_filters import filter_posts_by_params, filter_posts_by_user_role
+from apps.utils.validators import (
+    get_valid_tags_or_404,
+    validate_invalid_fields,
+    validate_required_fields,
+)
 
 
 class PostListView(View):
     http_method_names = ['get', 'post', 'head', 'options']
 
     def get_queryset(self, *args, **kwargs):
+        user = self.request.user
         queryset = Post.objects.all()
-        # Filtering
-        category = self.request.GET.get('category')
-        tags = self.request.GET.get('tags')
-        search = self.request.GET.get('search')
-
-        if category:
-            queryset = queryset.filter(category__slug=category)
-
-        if tags:
-            tag_slugs = tags.split(',')
-            queryset = queryset.filter(tags__slug__in=tag_slugs).distinct()
-
-        if search:
-            search_normalized = normalize_text(search)
-            keywords = re.findall(r'\w+', search_normalized)
-            query = Q()
-            for keyword in keywords:
-                query |= Q(title__icontains=keyword)
-            queryset = queryset.filter(query)
+        queryset = filter_posts_by_user_role(queryset, user)
+        queryset = filter_posts_by_params(queryset, self.request.GET)
         return queryset
 
     def get(self, request, *args, **kwargs):
-        response_data = {
-            'data': list(
-                PostSerializer.serialize_post(post) for post in self.get_queryset()
-            )
-        }
-        return JsonResponse(response_data, status=200)
+        try:
+            queryset = self.get_queryset()
+            data = [PostSerializer.serialize_post(post) for post in queryset]
+            return jarb.ok(data)
+
+        except ValidationError as e:
+            return jarb.error(400, 'Bad Request', str(e))
+        except Http404 as e:
+            return jarb.error(404, 'Not Found', str(e))
+        except Exception as e:
+            return jarb.error(500, 'Internal Server Error', str(e))
 
     @method_decorator([login_required, admin_or_author_required])
     def post(self, request, *args, **kwargs):
         try:
             data = json.loads(request.body)
-            allowed_fields = {'title', 'content', 'category', 'tags'}
-            invalid_fields = set(data.keys()) - allowed_fields
-            if invalid_fields:
-                return JsonResponse(
-                    {'error': f'Invalid fields: {", ".join(invalid_fields)}'},
-                    status=400,
-                )
-            category_slug = data.get('category')
-            if not category_slug:
-                return JsonResponse({'error': 'Category is required'}, status=400)
-            category = Category.objects.filter(slug=category_slug).first()
+            allowed_fields = {
+                'title',
+                'content',
+                'category',
+                'tags',
+            }
+            required_fields = [
+                'title',
+                'content',
+                'category',
+            ]
 
-            if not category:
-                return JsonResponse({'error': 'Category not found'}, status=404)
+            validate_invalid_fields(data, allowed_fields)
+            validate_required_fields(data, required_fields)
+
+            category = get_object_or_404(Category, slug=data.get('category'))
+
+            tag_slugs = data.get('tags') or []
+            tags = get_valid_tags_or_404(tag_slugs)
 
             post = Post(
                 title=data.get('title'),
@@ -74,25 +73,13 @@ class PostListView(View):
                 status=Post.Status.DRAFT,
             )
 
-            tag_slugs = set(data.get('tags', []))
-            tags = {tag.slug: tag for tag in Tag.objects.filter(slug__in=tag_slugs)}
-            invalid_tags = tag_slugs - tags.keys()
-
-            if invalid_tags:
-                return JsonResponse(
-                    {'error': f'Tags not found: {", ".join(invalid_tags)}'},
-                    status=404,
-                )
-
             post.save()
-            if tags:
-                post.tags.set(tags.values())
-            return JsonResponse(
-                {'data': PostSerializer.serialize_post(post)}, status=201
-            )
-        except json.JSONDecodeError as e:
-            return JsonResponse({'error': e.msg}, status=400)
-        except ValidationError as e:
-            return JsonResponse({'error': str(e)}, status=400)
+            post.tags.set(tags.values())
+
+            return jarb.created(PostSerializer.serialize_post(post))
+        except (json.JSONDecodeError, ValidationError, ValueError) as e:
+            return jarb.error(400, 'Bad Request', str(e))
+        except Http404 as e:
+            return jarb.error(404, 'Not Found', str(e))
         except Exception as e:
-            return JsonResponse({'error': str(e)}, status=500)
+            return jarb.error(500, 'Internal Server Error', str(e))
