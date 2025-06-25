@@ -1,11 +1,14 @@
 import json
 
 from django.core.exceptions import ValidationError
-from django.http import HttpResponse, JsonResponse
+from django.http import Http404
+from django.shortcuts import get_object_or_404
 from django.utils.decorators import method_decorator
 from django.views import View
 
 from apps.utils.decorators import admin_required, login_required
+from apps.utils.jsonapi_responses import JsonApiResponseBuilder as jarb
+from apps.utils.validators import validate_invalid_fields, validate_required_fields
 
 from ..models import Tag
 from ..serializers import TagSerializer
@@ -14,97 +17,76 @@ from ..serializers import TagSerializer
 class TagListView(View):
     http_method_names = ['get', 'post', 'head', 'options']
 
-    def get_queryset(self):
-        return Tag.objects.all()
-
     def get(self, request, *args, **kwargs):
-        response_data = {
-            'data': [TagSerializer.serialize_tag(tag) for tag in self.get_queryset()]
-        }
-        return JsonResponse(response_data)
+        try:
+            queryset = Tag.objects.all()
+            data = [TagSerializer.serialize_tag(tag) for tag in queryset]
+            return jarb.ok(data)
+        except Exception as e:
+            return jarb.error(500, 'Internal Server Error', str(e))
 
     @method_decorator([login_required, admin_required])
     def post(self, request, *args, **kwargs):
         try:
             data = json.loads(request.body)
-            allowed_fields = {'name'}
-            invalid_fields = set(data) - allowed_fields
 
-            if invalid_fields:
-                return JsonResponse(
-                    {'error': f'Invalid fields: {", ".join(invalid_fields)}'},
-                    status=400,
-                )
+            validate_invalid_fields(data, {'name'})
+            validate_required_fields(data, ['name'])
 
             tag = Tag(name=data.get('name'))
-
             tag.save()
-            return JsonResponse({'data': TagSerializer.serialize_tag(tag)}, status=201)
-        except json.JSONDecodeError as e:
-            return JsonResponse({'error': e.msg}, status=400)
-        except ValidationError as e:
-            return JsonResponse({'error': str(e)}, status=400)
+            return jarb.created(TagSerializer.serialize_tag(tag))
+        except (json.JSONDecodeError, ValidationError, ValueError) as e:
+            return jarb.error(400, 'Bad Request', str(e))
         except Exception as e:
-            return JsonResponse({'error': str(e)}, status=500)
+            return jarb.error(500, 'Internal Server Error', str(e))
 
 
 class TagDetailView(View):
     http_method_names = ['get', 'patch', 'delete', 'head', 'options']
 
-    def get_object(self):
-        return Tag.objects.filter(slug=self.kwargs.get('slug')).first()
-
     def get(self, request, *args, **kwargs):
-        tag = self.get_object()
+        try:
+            tag = get_object_or_404(Tag, slug=self.kwargs.get('slug'))
+            data = TagSerializer.serialize_tag(tag)
 
-        if not tag:
-            return JsonResponse({'error': 'Tag not found'}, status=404)
+            if data['relationships']:
+                data['included'] = TagSerializer.build_included_data(tag)
 
-        response_data = {'data': TagSerializer.serialize_tag(tag)}
-        included = TagSerializer.build_included_data(tag)
-
-        if included:
-            response_data['included'] = included
-
-        return JsonResponse(response_data)
+            return jarb.ok(data)
+        except Http404 as e:
+            return jarb.error(404, 'Not Found', str(e))
+        except Exception as e:
+            return jarb.error(500, 'Internal Server Error', str(e))
 
     @method_decorator([login_required, admin_required])
     def patch(self, request, *args, **kwargs):
         try:
-            tag = self.get_object()
-
-            if not tag:
-                return JsonResponse({'error': 'Tag not found'}, status=404)
-
+            tag = get_object_or_404(Tag, slug=self.kwargs.get('slug'))
             data = json.loads(request.body)
-            allowed_fields = {'name'}
-            invalid_fields = set(data) - allowed_fields
 
-            if invalid_fields:
-                return JsonResponse(
-                    {'error': f'Invalid fields: {", ".join(invalid_fields)}'},
-                    status=400,
-                )
+            validate_invalid_fields(data, {'name'})
+
+            if data.get('name') in [None, '']:
+                raise ValidationError('The name field cannot be empty or null.')
 
             tag.name = data.get('name')
-
             tag.save()
-            return JsonResponse({'data': TagSerializer.serialize_tag(tag)}, status=200)
-        except json.JSONDecodeError as e:
-            return JsonResponse({'error': e.msg}, status=400)
-        except ValidationError as e:
-            return JsonResponse({'error': str(e)}, status=400)
+            return jarb.ok(TagSerializer.serialize_tag(tag))
+        except (json.JSONDecodeError, ValidationError, ValueError) as e:
+            return jarb.error(400, 'Bad Request', str(e))
+        except Http404 as e:
+            return jarb.error(404, 'Not Found', str(e))
         except Exception as e:
-            return JsonResponse({'error': str(e)}, status=500)
+            return jarb.error(500, 'Internal Server Error', str(e))
 
     @method_decorator([login_required, admin_required])
     def delete(self, request, *args, **kwargs):
         try:
-            tag = self.get_object()
-            if not tag:
-                return HttpResponse(status=404)
-
+            tag = get_object_or_404(Tag, slug=self.kwargs.get('slug'))
             tag.delete()
-            return HttpResponse(status=204)
+            return jarb.no_content()
+        except Http404 as e:
+            return jarb.error(404, 'Not Found', str(e))
         except Exception as e:
-            return JsonResponse({'error': str(e)}, status=500)
+            return jarb.error(500, 'Internal Server Error', str(e))
