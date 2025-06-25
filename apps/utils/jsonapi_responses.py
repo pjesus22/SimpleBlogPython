@@ -2,7 +2,7 @@ from dataclasses import asdict, dataclass
 from datetime import datetime
 from typing import Dict, List, Optional, Union
 
-from django.http import JsonResponse
+from django.http import HttpResponse, JsonResponse
 
 
 @dataclass
@@ -22,7 +22,7 @@ class JsonApiResponseBuilder:
         links: Optional[Dict] = None,
     ) -> Dict:
         payload = {}
-        if data:
+        if data is not None:
             payload['data'] = data
         if errors:
             payload['errors'] = [asdict(error) for error in errors]
@@ -50,6 +50,10 @@ class JsonApiResponseBuilder:
     ) -> JsonResponse:
         response_data = JsonApiResponseBuilder._build_response(data=data, meta=meta)
         return JsonResponse(response_data, status=201)
+
+    @staticmethod
+    def no_content(**kwargs: Dict) -> HttpResponse:
+        return HttpResponse(status=204, **kwargs)
 
     @staticmethod
     def error(
