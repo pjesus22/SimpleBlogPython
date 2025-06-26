@@ -19,6 +19,7 @@ class User(AbstractUser):
     )
 
     def save(self, *args, **kwargs):
+        self.full_clean()
         if not self.pk:
             self.role = self.base_role
         super().save(*args, **kwargs)
