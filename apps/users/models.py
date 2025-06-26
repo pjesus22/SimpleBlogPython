@@ -76,6 +76,10 @@ class AuthorProfile(models.Model):
     def __str__(self):
         return f'{self.user.username} ({self.user.role}) profile'
 
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)
+
 
 @receiver(post_save, sender=Author)
 def create_author_profile(sender, instance, created, **kwargs):
@@ -90,6 +94,10 @@ class SocialAccount(BaseModel):
     profile = models.ForeignKey(
         AuthorProfile, on_delete=models.CASCADE, related_name='social_accounts'
     )
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return f'{self.username} ({self.provider})'
