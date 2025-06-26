@@ -1,7 +1,8 @@
 import json
 
 from django.core.exceptions import ValidationError
-from django.http import HttpResponse, JsonResponse
+from django.http import Http404
+from django.shortcuts import get_object_or_404
 from django.utils.decorators import method_decorator
 from django.views import View
 
@@ -10,25 +11,26 @@ from apps.utils.decorators import (
     admin_required,
     login_required,
 )
+from apps.utils.jsonapi_responses import JsonApiResponseBuilder as jarb
+from apps.utils.validators import (
+    validate_invalid_fields,
+    validate_required_fields,
+)
 
-from ..models import User
+from ..models import Author, User
 from ..serializers import UserSerializer
 
 
 class UserListView(View):
     http_method_names = ['get', 'post', 'head', 'options']
 
-    def get_queryset(self):
-        return User.objects.all()
-
     @method_decorator([login_required, admin_required])
     def get(self, request, *args, **kwargs):
-        response_data = {
-            'data': [
-                UserSerializer.serialize_user(user) for user in self.get_queryset()
-            ]
-        }
-        return JsonResponse(response_data)
+        try:
+            data = [UserSerializer.serialize_user(user) for user in User.objects.all()]
+            return jarb.ok(data)
+        except Exception as e:
+            return jarb.error(500, 'Internal Server Error', str(e))
 
     @method_decorator([login_required, admin_required])
     def post(self, request, *args, **kwargs):
@@ -40,67 +42,58 @@ class UserListView(View):
                 'password',
                 'first_name',
                 'last_name',
-                'role',
             }
-            invalid_fields = set(data) - allowed_fields
-            if invalid_fields:
-                return JsonResponse(
-                    {'error': f'Invalid fields: {", ".join(invalid_fields)}'},
-                    status=400,
-                )
+            required_fields = {'username', 'email', 'password', 'role'}
+
+            validate_invalid_fields(data, allowed_fields | required_fields)
+            validate_required_fields(data, required_fields)
 
             filtered_data = {k: v for k, v in data.items() if k in allowed_fields}
 
-            user = User(**{k: v for k, v in filtered_data.items() if k != 'password'})
+            user = Author(**{k: v for k, v in filtered_data.items() if k != 'password'})
             user.set_password(filtered_data['password'])
 
-            user.full_clean()
             user.save()
-            return JsonResponse(
-                {'data': UserSerializer.serialize_user(user)}, status=201
-            )
-        except json.JSONDecodeError as e:
-            return JsonResponse({'error': e.msg}, status=400)
-        except ValidationError as e:
-            return JsonResponse({'error': str(e)}, status=400)
+            return jarb.created(UserSerializer.serialize_user(user))
+        except (json.JSONDecodeError, ValidationError) as e:
+            return jarb.error(400, 'Bad Request', str(e))
         except Exception as e:
-            return JsonResponse({'error': str(e)}, status=500)
+            return jarb.error(500, 'Internal Server Error', str(e))
 
 
 class UserDetailView(View):
     http_method_names = ['get', 'patch', 'delete', 'head', 'options']
 
-    def get_object(self):
-        return User.objects.filter(pk=self.kwargs.get('pk')).first()
-
     @method_decorator([login_required, admin_or_author_required])
     def get(self, request, *args, **kwargs):
-        user = self.get_object()
+        try:
+            user = get_object_or_404(User, pk=self.kwargs.get('pk'))
 
-        if not user:
-            return JsonResponse({'error': 'User not found'}, status=404)
+            if not (request.user.role == 'admin' or request.user.id == user.id):
+                return jarb.error(
+                    403, 'Forbidden', 'You do not have permission to view this user'
+                )
 
-        if not (request.user.role == 'admin' or request.user.id == user.id):
-            return JsonResponse({'error': 'Permission denied'}, status=403)
+            data = UserSerializer.serialize_user(user)
 
-        response_data = {'data': UserSerializer.serialize_user(user)}
-        included = UserSerializer.build_included_data(user)
+            if data['relationships']:
+                data['included'] = UserSerializer.build_included_data(user)
 
-        if included:
-            response_data['included'] = included
-
-        return JsonResponse(response_data)
+            return jarb.ok(data)
+        except Http404:
+            return jarb.error(404, 'Not Found', 'User not found')
+        except Exception as e:
+            return jarb.error(500, 'Internal Server Error', str(e))
 
     @method_decorator([login_required, admin_or_author_required])
     def patch(self, request, *args, **kwargs):
         try:
-            user = self.get_object()
-
-            if not user:
-                return JsonResponse({'error': 'User not found'}, status=404)
+            user = get_object_or_404(User, pk=self.kwargs.get('pk'))
 
             if not (request.user.role == 'admin' or request.user.id == user.id):
-                return JsonResponse({'error': 'Permission denied'}, status=403)
+                return jarb.error(
+                    403, 'Forbidden', 'You do not have permission to edit this user'
+                )
 
             data = json.loads(request.body)
             allowed_fields = {
@@ -110,41 +103,37 @@ class UserDetailView(View):
                 'first_name',
                 'last_name',
             }
-            invalid_fields = set(data) - allowed_fields
 
-            if invalid_fields:
-                return JsonResponse(
-                    {'error': f'Invalid fields: {", ".join(invalid_fields)}'},
-                    status=400,
-                )
+            validate_invalid_fields(data, allowed_fields)
 
-            for field in allowed_fields & data.keys():
-                setattr(user, field, data[field])
+            for field, value in data.items():
+                if value in ['', None]:
+                    raise ValidationError(f'The {field} field cannot be empty or null.')
+                if field == 'password':
+                    user.set_password(value)
+                else:
+                    setattr(user, field, value)
 
-            user.full_clean()
             user.save()
-            return JsonResponse(
-                {'data': UserSerializer.serialize_user(user)}, status=200
-            )
-        except json.JSONDecodeError as e:
-            return JsonResponse({'error': e.msg}, status=400)
-        except ValidationError as e:
-            return JsonResponse({'error': str(e)}, status=400)
+            return jarb.ok(UserSerializer.serialize_user(user))
+        except (json.JSONDecodeError, ValidationError, ValueError) as e:
+            return jarb.error(400, 'Bad Request', str(e))
         except Exception as e:
-            return JsonResponse({'error': str(e)}, status=500)
+            return jarb.error(500, 'Internal Server Error', str(e))
 
     @method_decorator([login_required, admin_or_author_required])
     def delete(self, request, *args, **kwargs):
         try:
-            user = self.get_object()
-
-            if not user:
-                return JsonResponse({'error': 'User not found'}, status=404)
+            user = get_object_or_404(User, pk=self.kwargs.get('pk'))
 
             if not (request.user.role == 'admin' or request.user.id == user.id):
-                return JsonResponse({'error': 'Permission denied'}, status=403)
+                return jarb.error(
+                    403, 'Forbidden', 'You do not have permission to delete this user'
+                )
 
             user.delete()
-            return HttpResponse(status=204)
+            return jarb.no_content()
+        except Http404 as e:
+            return jarb.error(404, 'Not Found', str(e))
         except Exception as e:
-            return JsonResponse({'error': str(e)}, status=500)
+            return jarb.error(500, 'Internal Server Error', str(e))
