@@ -1,10 +1,10 @@
 import json
 
 from django.contrib.auth import authenticate, login, logout
-from django.http import JsonResponse
 from django.middleware.csrf import get_token
 
 from apps.utils.decorators import require_http_methods_json_response
+from apps.utils.jsonapi_responses import JsonApiResponseBuilder as jarb
 
 
 @require_http_methods_json_response(['POST'])
@@ -15,44 +15,43 @@ def login_view(request):
         invalid_fields = set(data) - allowed_fields
 
         if invalid_fields:
-            return JsonResponse(
-                {'error': f'Invalid fields: {", ".join(invalid_fields)}'},
-                status=400,
+            return jarb.error(
+                400, 'Bad Request', f'Invalid fields: {", ".join(invalid_fields)}'
             )
 
         username = data.get('username')
         password = data.get('password')
 
         if not username or not password:
-            return JsonResponse(
-                {'error': 'Both username and password are required'}, status=400
-            )
+            return jarb.error(400, 'Bad Request', 'Username and password are required')
 
         user = authenticate(request, username=username, password=password)
 
         if user:
             login(request, user)
-            return JsonResponse(
-                {'message': 'Successfully logged in', 'user': user.username}
+            return jarb.ok(
+                {
+                    'message': f'Successfully logged in with user id {user.id}',
+                }
             )
         else:
-            return JsonResponse({'error': 'Invalid credentials'}, status=401)
+            return jarb.error(401, 'Unauthorized', 'Invalid username or password')
 
     except json.JSONDecodeError:
-        return JsonResponse({'error': 'Invalid JSON format'}, status=400)
+        return jarb.error(400, 'Bad Request', 'Invalid JSON format')
     except Exception as e:
-        return JsonResponse({'error': str(e)}, status=500)
+        return jarb.error(500, 'Internal Server Error', str(e))
 
 
 @require_http_methods_json_response(['POST'])
 def logout_view(request):
     if not request.user.is_authenticated:
-        return JsonResponse({'error': 'No authenticated user'}, status=401)
+        return jarb.error(403, 'Forbidden', 'User is not authenticated')
 
     logout(request)
-    return JsonResponse({'message': 'Successfully logged out'})
+    return jarb.ok({'message': 'Successfully logged out'})
 
 
 @require_http_methods_json_response(['GET'])
 def csrf_token_view(request):
-    return JsonResponse({'token': get_token(request)})
+    return jarb.ok({'csrfToken': get_token(request)})
