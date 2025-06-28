@@ -1,7 +1,10 @@
 import factory
 from django.contrib.auth.hashers import make_password
+from faker import Faker
 
 from apps.users.models import Admin, Author, AuthorProfile, User
+
+fake = Faker()
 
 
 class UserFactory(factory.django.DjangoModelFactory):
