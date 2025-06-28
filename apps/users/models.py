@@ -71,7 +71,7 @@ class AuthorProfile(models.Model):
         blank=True,
         null=True,
     )
-    bio = models.TextField()
+    bio = models.TextField(blank=True)
 
     def __str__(self):
         return f'{self.user.username} ({self.user.role}) profile'
