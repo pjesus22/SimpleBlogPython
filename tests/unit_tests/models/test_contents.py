@@ -44,6 +44,11 @@ def test_post_slug_generated_on_save(db, category_factory, author_factory):
     assert post.slug == 'test-post'
 
 
+def test_post_has_is_public_method(db, post_factory):
+    post = post_factory.create(status='published')
+    assert post.is_public() is True
+
+
 def test_tag_str_():
     tag = Tag(name='Test Tag')
     assert str(tag) == tag.name
