@@ -78,7 +78,7 @@ class PostSerializer:
 
     def _serialize_statistics(statistics):
         data = {
-            'type': 'post-statistics',
+            'type': 'post_statistics',
             'id': str(statistics.post.id),
             'attributes': model_to_dict(statistics, exclude=['post']),
         }
@@ -117,7 +117,7 @@ class PostSerializer:
                 'id': str(media_file.id),
                 'attributes': {
                     'file': media_file.file.url,
-                    'type': media_file.type,
+                    'type': str(media_file.type),
                     'created_at': media_file.created_at,
                     'updated_at': media_file.updated_at,
                 },
