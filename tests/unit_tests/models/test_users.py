@@ -8,6 +8,11 @@ def test_admin_str_():
     assert str(user) == f'{user.username} ({user.role})'
 
 
+def test_admin_manager(db, admin_factory):
+    admin_factory.create(username='test_admin')
+    assert Admin.objects.get(username='test_admin')
+
+
 def test_author_str_():
     user = Author(username='testAuthor')
     assert str(user) == f'{user.username} ({user.role})'
