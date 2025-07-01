@@ -55,10 +55,6 @@ class Author(User):
         proxy = True
 
 
-def get_user_profile_picture_upload_path(instance, filename):
-    return f'{instance.user.id}/image/profile/{filename}'
-
-
 class AuthorProfile(models.Model):
     user = models.OneToOneField(
         Author,
