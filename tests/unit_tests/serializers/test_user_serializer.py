@@ -1,115 +1,103 @@
-import pytest
-
 from apps.users.serializers import UserSerializer
 
-pytestmark = pytest.mark.django_db
 
-
-@pytest.fixture
-def user_inst(
-    author_factory, post_factory, social_account_factory, author_profile_factory
+def test_serialize_user_includes_relationships_when_requested(
+    db, author_factory, post_factory
 ):
-    user = author_factory(
-        username='admin',
-        email='admin@admin.com',
-        is_superuser=True,
-        is_staff=True,
-        is_active=True,
-        first_name='Admin',
-        last_name='Admin',
-    )
-    post_factory.create_batch(size=3, author=user)
-    profile = author_profile_factory.create(user=user)
-    social_account_factory.create_batch(size=3, profile=profile)
-    return user
-
-
-def test_serialize_user_includes_relationships_when_requested(user_inst):
-    serialized_data = UserSerializer.serialize_user(
-        user_inst, include_relationships=True
-    )
-    expected_data = {
+    user = author_factory.create()
+    post_factory.create_batch(size=2, author=user)
+    data = UserSerializer.serialize_user(user, include_relationships=True)
+    expected = {
+        'profile': {'data': {'type': 'author-profiles', 'id': str(user.profile.pk)}},
         'posts': {
-            'data': [
-                {'type': 'posts', 'id': str(post.pk)} for post in user_inst.posts.all()
-            ]
-        },
-        'profile': {
-            'data': {'type': 'author-profiles', 'id': str(user_inst.profile.pk)}
+            'data': [{'type': 'posts', 'id': str(post.id)} for post in user.posts.all()]
         },
     }
 
-    assert 'relationships' in serialized_data
-    assert serialized_data['relationships'] == expected_data
+    assert 'relationships' in data
+    assert data['relationships'] == expected
 
 
-def test_serialize_user_excludes_relationships_when_not_requested(user_inst):
-    serialized_data = UserSerializer.serialize_user(
-        user_inst, include_relationships=False
+def test_serialize_user_excludes_relationships_when_not_requested(db, author_factory):
+    user = author_factory.create()
+    data = UserSerializer.serialize_user(user, include_relationships=False)
+
+    assert 'relationships' not in data
+
+
+def test_build_included_data_includes_correct_post_details(
+    db, author_factory, social_account_factory, post_factory, author_profile_factory
+):
+    user = author_factory.create()
+    profile = author_profile_factory.create(user=user)
+    social_account_factory.create_batch(size=2, profile=profile)
+    post_factory.create_batch(size=2, author=user)
+
+    user.refresh_from_db()
+
+    included = UserSerializer.build_included_data(user)
+
+    expected = []
+
+    expected.extend(
+        [
+            {
+                'type': 'posts',
+                'id': str(post.pk),
+                'attributes': {
+                    'title': post.title,
+                    'slug': post.slug,
+                    'content': post.content,
+                    'status': post.status,
+                    'created_at': post.created_at,
+                    'updated_at': post.updated_at,
+                },
+            }
+            for post in user.posts.all()
+        ]
     )
 
-    assert 'relationships' not in serialized_data
-
-
-def test_build_included_data_includes_correct_post_details(user_inst):
-    included = UserSerializer.build_included_data(user_inst)
-    expected_posts = [
+    expected.append(
         {
-            'type': 'posts',
-            'id': str(post.pk),
+            'type': 'author-profiles',
+            'id': str(profile.user.pk),
             'attributes': {
-                'title': post.title,
-                'slug': post.slug,
-                'content': post.content,
-                'status': post.status,
-                'created_at': post.created_at,
-                'updated_at': post.updated_at,
+                'bio': profile.bio,
+                'profile_picture': profile.profile_picture.name,
+            },
+            'relationships': {
+                'social_accounts': {
+                    'data': [
+                        {
+                            'type': 'social-accounts',
+                            'id': str(social.pk),
+                        }
+                        for social in user.profile.social_accounts.all()
+                    ]
+                }
             },
         }
-        for post in user_inst.posts.all()
-    ]
-    expected_profile = {  # NOQA: F841
-        'type': 'author-profiles',
-        'id': str(user_inst.profile.pk),
-        'attributes': {
-            'bio': user_inst.profile.bio,
-            'profile_picture': user_inst.profile.profile_picture.name,
-        },
-        'relationships': {
-            'social-accounts': {
-                'data': [
-                    {
-                        'type': 'social_accounts',
-                        'id': str(social.pk),
-                    }
-                    for social in user_inst.profile.social_accounts.all()
-                ]
+    )
+
+    expected.extend(
+        [
+            {
+                'type': 'social-accounts',
+                'id': str(social.pk),
+                'attributes': {
+                    'provider': social.provider,
+                    'username': social.username,
+                    'url': social.url,
+                    'created_at': social.created_at,
+                    'updated_at': social.updated_at,
+                },
             }
-        }
-        if user_inst.profile.social_accounts.exists()
-        else {},
-    }
+            for social in user.profile.social_accounts.all()
+        ]
+    )
 
-    expected_social_accounts = [
-        {
-            'type': 'social-accounts',
-            'id': str(social.pk),
-            'attributes': {
-                'provider': social.provider,
-                'username': social.username,
-                'url': social.url,
-                'created_at': social.created_at,
-                'updated_at': social.updated_at,
-            },
-        }
-        for social in user_inst.profile.social_accounts.all()
-    ]
+    included_set = {str(item) for item in included}
+    expected_set = {str(item) for item in expected}
 
-    for expected_social in expected_social_accounts:
-        assert expected_social in included
-
-    for expected_post in expected_posts:
-        assert expected_post in included
-
-    expected_length = len(expected_posts) + len(expected_social_accounts) + 1
-    assert len(included) == expected_length
+    assert len(included) == len(expected)
+    assert expected_set.issubset(included_set)

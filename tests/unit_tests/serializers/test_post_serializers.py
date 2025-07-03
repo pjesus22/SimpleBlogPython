@@ -2,33 +2,27 @@ import pytest
 
 from apps.content.serializers import PostSerializer
 
-pytestmark = pytest.mark.django_db
 
-
-@pytest.fixture
-def new_post(post_factory):
-    return post_factory()
-
-
-def test_serialize_post_includes_relationships_when_requested(new_post):
-    data = PostSerializer.serialize_post(new_post, include_relationships=True)
+def test_serialize_post_includes_relationships_when_requested(db, post_factory):
+    post = post_factory()
+    data = PostSerializer.serialize_post(post, include_relationships=True)
     expected = {
         'author': {
             'data': {
                 'type': 'users',
-                'id': str(new_post.author.pk),
+                'id': str(post.author.pk),
             }
         },
         'category': {
             'data': {
                 'type': 'categories',
-                'id': str(new_post.category.pk),
+                'id': str(post.category.pk),
             }
         },
         'statistics': {
             'data': {
                 'type': 'post_statistics',
-                'id': str(new_post.post_statistics.pk),
+                'id': str(post.post_statistics.pk),
             }
         },
     }
@@ -37,8 +31,9 @@ def test_serialize_post_includes_relationships_when_requested(new_post):
     assert all(key in data['relationships'] for key in expected.keys())
 
 
-def test_serialize_post_excludes_relationships_when_not_requested(new_post):
-    data = PostSerializer.serialize_post(new_post, include_relationships=False)
+def test_serialize_post_excludes_relationships_when_not_requested(db, post_factory):
+    post = post_factory()
+    data = PostSerializer.serialize_post(post, include_relationships=False)
 
     assert 'relationships' not in data
 
@@ -59,7 +54,7 @@ def test_serialize_post_excludes_relationships_when_not_requested(new_post):
     ],
 )
 def test_build_included_data_includes_correct_post_details(
-    post_factory, tag_factory, media_file_factory, tag_count, media_file_count
+    db, post_factory, tag_factory, media_file_factory, tag_count, media_file_count
 ):
     tags = tag_factory.create_batch(size=tag_count) if tag_count > 0 else []
     media_files = (
