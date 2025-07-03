@@ -94,10 +94,10 @@ class UserSerializer:
 
         base_data['relationships'] = {}
         if profile.social_accounts.exists():
-            base_data['relationships']['social-accounts'] = {
+            base_data['relationships']['social_accounts'] = {
                 'data': [
                     {
-                        'type': 'social_accounts',
+                        'type': 'social-accounts',
                         'id': str(social.id),
                     }
                     for social in profile.social_accounts.all()

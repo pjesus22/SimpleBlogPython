@@ -14,7 +14,7 @@ class AuthorProfileSerializer:
         if include_relationships:
             base_data['relationships'] = {}
             if profile.social_accounts.exists():
-                base_data['relationships']['social-accounts'] = {
+                base_data['relationships']['social_accounts'] = {
                     'data': [
                         {
                             'type': 'social-accounts',
