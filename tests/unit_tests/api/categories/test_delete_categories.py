@@ -1,23 +1,15 @@
-import json
-
-import pytest
 from django.urls import reverse
 
 from apps.content.models import Category
 
 
-@pytest.fixture
-def category(db, category_factory):
-    return category_factory.create(
-        name='test category', description='fake category description'
-    )
-
-
-def test_delete_category_success(db, logged_admin_client, category):
+def test_delete_category_success(db, logged_admin_client, category_factory):
+    category = category_factory.create()
     url = reverse('category-detail', kwargs={'slug': category.slug})
-    response = logged_admin_client.delete(path=url)
 
+    response = logged_admin_client.delete(path=url)
     assert response.status_code == 204
+    assert not Category.objects.filter(slug=category.slug).exists()
 
 
 def test_delete_category_not_found(db, logged_admin_client):
@@ -27,20 +19,27 @@ def test_delete_category_not_found(db, logged_admin_client):
     assert response.status_code == 404
 
 
-def test_delete_category_generic_exception(db, logged_admin_client, override, category):
+def test_delete_category_generic_exception(
+    db, logged_admin_client, override, category_factory
+):
+    category = category_factory.create()
+
     def fake_delete(*args, **kwargs):
         raise Exception('Something went wrong')
 
     with override(Category, 'delete', fake_delete):
         response = logged_admin_client.delete(
             path=reverse('category-detail', kwargs={'slug': category.slug}),
-            data=json.dumps(
-                {
-                    'name': 'test category',
-                    'description': 'fake category description',
-                }
-            ),
         )
 
+    response_data = response.json()['errors'][0]
+
+    expected = {
+        'status': '500',
+        'title': 'Internal Server Error',
+        'detail': 'Something went wrong',
+        'meta': response_data['meta'],
+    }
+
     assert response.status_code == 500
-    assert 'Something went wrong' in response.json()['error']
+    assert response_data == expected
