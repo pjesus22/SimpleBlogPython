@@ -42,8 +42,10 @@ class CategoryListView(View):
             category.save()
 
             return jarb.created(CategorySerializer.serialize_category(category))
-        except (ValidationError, ValueError, json.JSONDecodeError) as e:
-            return jarb.error(400, 'Bad Request', str(e))
+        except json.JSONDecodeError as e:
+            return jarb.error(400, 'Bad Request', f'Invalid JSON: {str(e)}')
+        except ValidationError as e:
+            return jarb.validation_errors_from_dict(e.message_dict)
         except Exception as e:
             return jarb.error(500, 'Internal Server Error', str(e))
 
@@ -76,13 +78,17 @@ class CategoryDetailView(View):
 
             for field, value in data.items():
                 if value in ['', None]:
-                    raise ValidationError(f'The {field} field cannot be empty or null.')
+                    raise ValidationError(
+                        {f'{field}': 'This field cannot be empty or null.'}
+                    )
                 setattr(category, field, value)
 
             category.save()
             return jarb.ok(CategorySerializer.serialize_category(category))
-        except (json.JSONDecodeError, ValidationError, ValueError) as e:
-            return jarb.error(400, 'Bad Request', str(e))
+        except json.JSONDecodeError as e:
+            return jarb.error(400, 'Bad Request', f'Invalid JSON: {str(e)}')
+        except ValidationError as e:
+            return jarb.validation_errors_from_dict(e.message_dict)
         except Http404 as e:
             return jarb.error(404, 'Not Found', str(e))
         except Exception as e:
