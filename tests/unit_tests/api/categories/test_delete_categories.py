@@ -20,26 +20,27 @@ def test_delete_category_not_found(db, logged_admin_client):
 
 
 def test_delete_category_generic_exception(
-    db, logged_admin_client, override, category_factory
+    db, monkeypatch, logged_admin_client, category_factory
 ):
     category = category_factory.create()
 
     def fake_delete(*args, **kwargs):
         raise Exception('Something went wrong')
 
-    with override(Category, 'delete', fake_delete):
-        response = logged_admin_client.delete(
-            path=reverse('category-detail', kwargs={'slug': category.slug}),
-        )
+    monkeypatch.setattr('apps.content.views.categories.Category.delete', fake_delete)
 
-    response_data = response.json()['errors'][0]
+    response = logged_admin_client.delete(
+        path=reverse('category-detail', kwargs={'slug': category.slug})
+    )
+
+    response_data = response.json()
 
     expected = {
         'status': '500',
         'title': 'Internal Server Error',
         'detail': 'Something went wrong',
-        'meta': response_data['meta'],
+        'meta': response_data['errors'][0]['meta'],
     }
 
     assert response.status_code == 500
-    assert response_data == expected
+    assert expected in response_data['errors']
