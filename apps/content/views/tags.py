@@ -35,9 +35,12 @@ class TagListView(View):
 
             tag = Tag(name=data.get('name'))
             tag.save()
+
             return jarb.created(TagSerializer.serialize_tag(tag))
-        except (json.JSONDecodeError, ValidationError, ValueError) as e:
-            return jarb.error(400, 'Bad Request', str(e))
+        except json.JSONDecodeError as e:
+            return jarb.error(400, 'Bad Request', f'Invalid JSON: {str(e)}')
+        except ValidationError as e:
+            return jarb.validation_errors_from_dict(e.message_dict)
         except Exception as e:
             return jarb.error(500, 'Internal Server Error', str(e))
 
@@ -68,13 +71,15 @@ class TagDetailView(View):
             validate_invalid_fields(data, {'name'})
 
             if data.get('name') in [None, '']:
-                raise ValidationError('The name field cannot be empty or null.')
+                raise ValidationError({'name': 'This field cannot be empty or null.'})
 
             tag.name = data.get('name')
             tag.save()
             return jarb.ok(TagSerializer.serialize_tag(tag))
-        except (json.JSONDecodeError, ValidationError, ValueError) as e:
-            return jarb.error(400, 'Bad Request', str(e))
+        except json.JSONDecodeError as e:
+            return jarb.error(400, 'Bad Request', f'Invalid JSON: {str(e)}')
+        except ValidationError as e:
+            return jarb.validation_errors_from_dict(e.message_dict)
         except Http404 as e:
             return jarb.error(404, 'Not Found', str(e))
         except Exception as e:
