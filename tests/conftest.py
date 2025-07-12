@@ -1,5 +1,4 @@
 import shutil
-from contextlib import contextmanager
 from pathlib import Path
 
 import pytest
@@ -71,17 +70,3 @@ def logged_author_client(author_factory, csrf_client):
     csrf_token = response.cookies['csrftoken'].value
     csrf_client.defaults['HTTP_X_CSRFTOKEN'] = csrf_token
     return csrf_client
-
-
-@pytest.fixture
-def override():
-    @contextmanager
-    def _override(obj, method_name, new_method):
-        original = getattr(obj, method_name)
-        setattr(obj, method_name, new_method)
-        try:
-            yield
-        finally:
-            setattr(obj, method_name, original)
-
-    return _override
