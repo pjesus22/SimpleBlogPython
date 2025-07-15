@@ -1,11 +1,12 @@
 import json
 
+import pytest
 from django.urls import reverse
 
-from apps.content.models import Tag
+from tests.unit_tests.api.conftest import build_expected_error
 
 
-def test_post_tag_success(db, logged_admin_client):
+def test_post_tag_201_created(db, logged_admin_client):
     payload = {'name': 'test tag'}
 
     response = logged_admin_client.post(
@@ -14,74 +15,63 @@ def test_post_tag_success(db, logged_admin_client):
         content_type='application/json',
     )
 
+    assert response.status_code == 201
+
+
+@pytest.mark.parametrize(
+    'payload, detailed_error',
+    [
+        (
+            {'name': 'test tag', 'invalid': 'Invalid field'},
+            'This field is not allowed.',
+        ),
+        ("'{invalid json", 'Invalid JSON: Expecting value: line 1 column 1 (char 0)'),
+        (
+            {'name': 'x' * 51},
+            'Ensure this value has at most 50 characters (it has 51).',
+        ),
+        ({'name': ''}, 'This field cannot be blank.'),
+    ],
+)
+def test_post_tags_validation_errors(db, logged_admin_client, payload, detailed_error):
+    url = reverse('tag-list')
+    data = json.dumps(payload) if isinstance(payload, dict) else payload
+
+    response = logged_admin_client.post(
+        path=url, data=data, content_type='application/json'
+    )
     response_data = response.json()
 
-    assert response.status_code == 201
-    assert 'data' in response_data
-    assert response_data['data']['attributes']['name'] == 'test tag'
+    expected = build_expected_error(
+        detailed_error, meta=response_data['errors'][0]['meta']
+    )
+
+    assert response.status_code == 400
+    assert expected in response_data.get('errors')
 
 
-def test_post_category_invalid_fields(db, logged_admin_client):
-    payload = {
-        'name': 'test tag',
-        'invalid': 'invalid',
-    }
+def test_post_category_generic_exception(
+    db, logged_admin_client, monkeypatch, fake_method_factory
+):
+    payload = {'name': 'test tag'}
+
+    monkeypatch.setattr(
+        'apps.content.views.tags.Tag.save',
+        fake_method_factory(raise_exception=Exception('Something went wrong')),
+    )
 
     response = logged_admin_client.post(
         path=reverse('tag-list'),
         data=json.dumps(payload),
         content_type='application/json',
     )
+    response_data = response.json()
 
-    assert response.status_code == 400
-    assert response.json() == {'error': 'Invalid fields: invalid'}
-
-
-def test_post_tag_json_decode_error(db, logged_admin_client):
-    payload = "'{invalid json"
-
-    response = logged_admin_client.post(
-        path=reverse('tag-list'),
-        data=payload,
-        content_type='application/json',
+    expected = build_expected_error(
+        detail='Something went wrong',
+        status=500,
+        meta=response_data['errors'][0]['meta'],
     )
-
-    assert response.status_code == 400
-    assert response.json()['error'] == 'Expecting value'
-
-
-def test_post_category_validation_error(db, logged_admin_client):
-    payload = {
-        'name': (
-            'Lorem ipsum dolor sit amet, consectetuer '
-            'adipiscing elit. Aenean commodo ligula eget dolor.'
-        ),
-    }
-
-    response = logged_admin_client.post(
-        path=reverse('tag-list'),
-        data=json.dumps(payload),
-        content_type='application/json',
-    )
-
-    assert response.status_code == 400
-    assert 'name' in response.json()['error'] and 'slug' in response.json()['error']
-
-
-def test_post_category_generic_exception(db, logged_admin_client, override):
-    def fake_save(*args, **kwargs):
-        raise Exception('Something went wrong')
-
-    payload = {
-        'name': 'test tag',
-    }
-
-    with override(Tag, 'save', fake_save):
-        response = logged_admin_client.post(
-            path=reverse('tag-list'),
-            data=json.dumps(payload),
-            content_type='application/json',
-        )
 
     assert response.status_code == 500
-    assert 'Something went wrong' in response.json()['error']
+    assert expected in response_data.get('errors')

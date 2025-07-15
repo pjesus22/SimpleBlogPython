@@ -3,97 +3,112 @@ import json
 import pytest
 from django.urls import reverse
 
-from apps.content.models import Tag
-
-pytestmark = pytest.mark.django_db
+from tests.unit_tests.api.conftest import build_expected_error
 
 
-@pytest.fixture
-def tag(tag_factory):
-    return tag_factory.create(name='test tag')
+def test_patch_tag_success(db, logged_admin_client, tag_factory):
+    tag_factory.create(name='Test Tag')
 
-
-def test_patch_tag_success(logged_admin_client, tag):
-    url = reverse('tag-detail', kwargs={'slug': 'test-tag'})
     payload = {'name': 'updated name'}
+    url = reverse('tag-detail', kwargs={'slug': 'test-tag'})
+
     response = logged_admin_client.patch(
         path=url,
         data=payload,
         content_type='application/json',
     )
+    response_data = response.json()
 
     assert response.status_code == 200
-    assert response.json()['data']['attributes']['name'] == 'updated name'
+    assert response_data['data']['attributes']['name'] == 'updated name'
 
 
-def test_patch_tag_not_found(logged_admin_client):
+def test_patch_tag_not_found(db, logged_admin_client):
     url = reverse('tag-detail', kwargs={'slug': 'non-existing-slug'})
     payload = {'name': 'updated name'}
+
     response = logged_admin_client.patch(
         url, data=payload, content_type='application/json'
     )
+    response_data = response.json()
+
+    expected = build_expected_error(
+        detail='No Tag matches the given query.',
+        status=404,
+        meta=response_data['errors'][0]['meta'],
+    )
 
     assert response.status_code == 404
-    assert response.json()['error'] == 'Tag not found'
+    assert expected in response_data['errors']
 
 
-def test_patch_tag_invalid_fields(logged_admin_client, tag):
-    payload = {
-        'name': 'updated name',
-        'invalid': 'invalid',
-    }
-    response = logged_admin_client.patch(
-        path=reverse('tag-detail', kwargs={'slug': 'test-tag'}),
-        data=payload,
-        content_type='application/json',
-    )
-
-    assert response.status_code == 400
-    assert response.json() == {'error': 'Invalid fields: invalid'}
-
-
-def test_patch_tag_json_decode_error(logged_admin_client, tag):
-    payload = "'{invalid json"
-
-    response = logged_admin_client.patch(
-        path=reverse('tag-detail', kwargs={'slug': 'test-tag'}),
-        data=payload,
-    )
-
-    assert response.status_code == 400
-    assert response.json()['error'] == 'Expecting value'
-
-
-def test_patch_tag_validation_error(logged_admin_client, tag):
-    payload = {
-        'name': (
-            'Lorem ipsum dolor sit amet, consectetuer '
-            'adipiscing elit. Aenean commodo ligula eget dolor.'
+@pytest.mark.parametrize(
+    'payload, expected',
+    [
+        (
+            {'invalid': 'invalid'},
+            build_expected_error(detail='This field is not allowed.'),
         ),
-    }
+        (
+            "'{invalid json",
+            build_expected_error(
+                detail='Invalid JSON: Expecting value: line 1 column 1 (char 0)'
+            ),
+        ),
+        (
+            {'name': 'x' * 51},
+            build_expected_error(
+                detail='Ensure this value has at most 50 characters (it has 51).'
+            ),
+        ),
+        (
+            {'name': ''},
+            build_expected_error(detail='This field cannot be empty or null.'),
+        ),
+    ],
+)
+def test_patch_category_validation_errors(
+    db, logged_admin_client, tag_factory, payload, expected
+):
+    tag_factory.create(name='Test Tag')
+
+    url = reverse('tag-detail', kwargs={'slug': 'test-tag'})
+    data = json.dumps(payload) if isinstance(payload, dict) else payload
+
+    response = logged_admin_client.patch(
+        path=url, data=data, content_type='application/json'
+    )
+    response_data = response.json()
+
+    expected.update({'meta': response_data['errors'][0]['meta']})
+
+    assert response.status_code == 400
+    assert expected in response_data['errors']
+
+
+def test_patch_tag_generic_exception(
+    db, logged_admin_client, tag_factory, monkeypatch, fake_method_factory
+):
+    tag_factory.create(name='Test Tag')
+    payload = {'name': 'test tag'}
+
+    monkeypatch.setattr(
+        'apps.content.views.tags.Tag.save',
+        fake_method_factory(raise_exception=Exception('Something went wrong')),
+    )
 
     response = logged_admin_client.patch(
         path=reverse('tag-detail', kwargs={'slug': 'test-tag'}),
         data=json.dumps(payload),
         content_type='application/json',
     )
+    response_data = response.json()
 
-    assert response.status_code == 400
-    assert 'name' in response.json()['error'] and 'slug' in response.json()['error']
-
-
-def test_patch_tag_generic_exception(logged_admin_client, override, tag):
-    def fake_save(*args, **kwargs):
-        raise Exception('Something went wrong')
-
-    payload = {'name': 'test tag'}
-
-    with override(Tag, 'save', fake_save):
-        response = logged_admin_client.patch(
-            path=reverse('tag-detail', kwargs={'slug': 'test-tag'}),
-            data=json.dumps(payload),
-            content_type='application/json',
-        )
+    expected = build_expected_error(
+        detail='Something went wrong',
+        status=500,
+        meta=response_data['errors'][0]['meta'],
+    )
 
     assert response.status_code == 500
-    assert 'Something went wrong' in response.json()['error']
+    assert expected in response_data.get('errors')
