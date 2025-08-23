@@ -1,7 +1,7 @@
 import json
 
 from django.core.exceptions import ValidationError
-from django.http import Http404, JsonResponse
+from django.http import Http404
 from django.shortcuts import get_object_or_404
 from django.utils.decorators import method_decorator
 from django.views import View
@@ -59,20 +59,17 @@ class PostDetailView(View):
                 post.category = category
 
             if 'tags' in data:
-                tags = get_valid_tags_or_404(data['tags'])
-                post.tags.set(tags.values())
+                post.tags.set(get_valid_tags_or_404(data['tags']))
 
-            for field, value in {
-                k: v for k, v in data.items() if k not in {'category', 'tags'}
-            }.items():
-                if value in ['', None]:
-                    raise ValidationError(...)
-                setattr(post, field, value)
+            for field in set(data.keys()) - {'category', 'tags'}:
+                setattr(post, field, data[field])
 
             post.save()
             return jarb.ok(PostSerializer.serialize_post(post))
-        except (json.JSONDecodeError, ValidationError, ValueError) as e:
-            return jarb.error(400, 'Bad Request', str(e))
+        except json.JSONDecodeError as e:
+            return jarb.error(400, 'Bad Request', f'Invalid JSON: {str(e)}')
+        except ValidationError as e:
+            return jarb.validation_errors_from_dict(e.message_dict)
         except Http404 as e:
             return jarb.error(404, 'Not Found', str(e))
         except Exception as e:
@@ -93,4 +90,4 @@ class PostDetailView(View):
         except Http404 as e:
             return jarb.error(404, 'Not Found', str(e))
         except Exception as e:
-            return JsonResponse({'error': str(e)}, status=500)
+            return jarb.error(500, 'Internal Server Error', str(e))
