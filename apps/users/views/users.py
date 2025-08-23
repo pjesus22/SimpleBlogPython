@@ -1,5 +1,6 @@
 import json
 
+from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
 from django.http import Http404
 from django.shortcuts import get_object_or_404
@@ -43,10 +44,13 @@ class UserListView(View):
                 'first_name',
                 'last_name',
             }
-            required_fields = {'username', 'email', 'password', 'role'}
+            required_fields = {'username', 'email', 'password'}
 
-            validate_invalid_fields(data, allowed_fields | required_fields)
+            validate_invalid_fields(data, allowed_fields)
             validate_required_fields(data, required_fields)
+
+            password = data.get('password')
+            validate_password(password=password)
 
             filtered_data = {k: v for k, v in data.items() if k in allowed_fields}
 
@@ -55,8 +59,13 @@ class UserListView(View):
 
             user.save()
             return jarb.created(UserSerializer.serialize_user(user))
-        except (json.JSONDecodeError, ValidationError) as e:
+        except json.JSONDecodeError as e:
             return jarb.error(400, 'Bad Request', str(e))
+        except ValidationError as e:
+            if hasattr(e, 'error_dict'):
+                return jarb.validation_errors_from_dict(e.message_dict)
+            else:
+                return jarb.validation_errors_from_list(e.messages)
         except Exception as e:
             return jarb.error(500, 'Internal Server Error', str(e))
 
@@ -71,7 +80,7 @@ class UserDetailView(View):
 
             if not (request.user.role == 'admin' or request.user.id == user.id):
                 return jarb.error(
-                    403, 'Forbidden', 'You do not have permission to view this user'
+                    403, 'Forbidden', 'You do not have permission to view this user.'
                 )
 
             data = UserSerializer.serialize_user(user)
@@ -80,8 +89,8 @@ class UserDetailView(View):
                 data['included'] = UserSerializer.build_included_data(user)
 
             return jarb.ok(data)
-        except Http404:
-            return jarb.error(404, 'Not Found', 'User not found')
+        except Http404 as e:
+            return jarb.error(404, 'Not Found', str(e))
         except Exception as e:
             return jarb.error(500, 'Internal Server Error', str(e))
 
@@ -92,7 +101,7 @@ class UserDetailView(View):
 
             if not (request.user.role == 'admin' or request.user.id == user.id):
                 return jarb.error(
-                    403, 'Forbidden', 'You do not have permission to edit this user'
+                    403, 'Forbidden', 'You do not have permission to edit this user.'
                 )
 
             data = json.loads(request.body)
@@ -107,17 +116,23 @@ class UserDetailView(View):
             validate_invalid_fields(data, allowed_fields)
 
             for field, value in data.items():
-                if value in ['', None]:
-                    raise ValidationError(f'The {field} field cannot be empty or null.')
                 if field == 'password':
+                    validate_password(password=value)
                     user.set_password(value)
                 else:
                     setattr(user, field, value)
 
             user.save()
             return jarb.ok(UserSerializer.serialize_user(user))
-        except (json.JSONDecodeError, ValidationError, ValueError) as e:
+        except json.JSONDecodeError as e:
             return jarb.error(400, 'Bad Request', str(e))
+        except ValidationError as e:
+            if hasattr(e, 'error_dict'):
+                return jarb.validation_errors_from_dict(e.message_dict)
+            else:
+                return jarb.validation_errors_from_list(e.messages)
+        except Http404 as e:
+            return jarb.error(404, 'Not Found', str(e))
         except Exception as e:
             return jarb.error(500, 'Internal Server Error', str(e))
 
@@ -128,7 +143,7 @@ class UserDetailView(View):
 
             if not (request.user.role == 'admin' or request.user.id == user.id):
                 return jarb.error(
-                    403, 'Forbidden', 'You do not have permission to delete this user'
+                    403, 'Forbidden', 'You do not have permission to delete this user.'
                 )
 
             user.delete()
