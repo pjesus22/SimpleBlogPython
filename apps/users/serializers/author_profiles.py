@@ -6,9 +6,6 @@ class AuthorProfileSerializer:
             'id': str(profile.user.pk),
             'attributes': {
                 'bio': profile.bio,
-                'profile_picture': profile.profile_picture.name
-                if profile.profile_picture
-                else None,
             },
         }
         if include_relationships:
