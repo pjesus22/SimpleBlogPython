@@ -38,11 +38,6 @@ python_files = "test.py test_*.py *_tests.py"
 markers = [
 	"models: intended for testing db models relationships"
 ]
-# Configuracion de logging
-log_cli = true
-log_cli_level = "INFO"
-log_cli_format = "%(asctime)s [%(levelname)s] %(message)s"
-log_cli_date_format = "%Y-%m-%d %H:%M:%S"
 
 [tool.coverage.run]
 omit = [
