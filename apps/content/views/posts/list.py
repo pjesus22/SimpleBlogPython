@@ -35,7 +35,7 @@ class PostListView(View):
             return jarb.ok(data)
 
         except ValidationError as e:
-            return jarb.error(400, 'Bad Request', str(e))
+            return jarb.validation_errors_from_dict(e.message_dict)
         except Http404 as e:
             return jarb.error(404, 'Not Found', str(e))
         except Exception as e:
@@ -45,17 +45,8 @@ class PostListView(View):
     def post(self, request, *args, **kwargs):
         try:
             data = json.loads(request.body)
-            allowed_fields = {
-                'title',
-                'content',
-                'category',
-                'tags',
-            }
-            required_fields = [
-                'title',
-                'content',
-                'category',
-            ]
+            allowed_fields = {'title', 'content', 'category', 'tags'}
+            required_fields = ['title', 'content', 'category']
 
             validate_invalid_fields(data, allowed_fields)
             validate_required_fields(data, required_fields)
@@ -77,8 +68,10 @@ class PostListView(View):
             post.tags.set(tags.values())
 
             return jarb.created(PostSerializer.serialize_post(post))
-        except (json.JSONDecodeError, ValidationError, ValueError) as e:
-            return jarb.error(400, 'Bad Request', str(e))
+        except json.JSONDecodeError as e:
+            return jarb.error(400, 'Bad Request', f'Invalid JSON: {str(e)}')
+        except ValidationError as e:
+            return jarb.validation_errors_from_dict(e.message_dict)
         except Http404 as e:
             return jarb.error(404, 'Not Found', str(e))
         except Exception as e:
