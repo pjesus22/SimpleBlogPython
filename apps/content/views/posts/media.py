@@ -1,5 +1,3 @@
-import json
-
 from django.core.exceptions import ValidationError
 from django.http import Http404
 from django.shortcuts import get_object_or_404
@@ -63,8 +61,8 @@ class PostMediaFileListView(View):
 
             data = MediaFileSerializer.serialize_media_files(media_files, public=False)
             return jarb.created(data)
-        except (json.JSONDecodeError, ValidationError, ValueError) as e:
-            return jarb.error(400, 'Bad Request', str(e))
+        except ValidationError as e:
+            return jarb.validation_errors_from_dict(e.message_dict)
         except Http404 as e:
             return jarb.error(404, 'Not Found', str(e))
         except Exception as e:
