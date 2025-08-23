@@ -21,11 +21,20 @@ class Post(BaseModel):
         Category, on_delete=models.CASCADE, related_name='posts'
     )
     tags = models.ManyToManyField(Tag, blank=True, related_name='posts')
-    title = models.CharField(max_length=50)
+    title = models.CharField(
+        max_length=50,
+        blank=False,
+        null=False,
+    )
     slug = models.SlugField(max_length=50, unique=True, null=False)
-    content = models.TextField()
+    content = models.TextField(
+        blank=False,
+        null=False,
+    )
     status = models.CharField(
-        choices=Status.choices, max_length=10, default=Status.DRAFT
+        choices=Status.choices,
+        max_length=10,
+        default=Status.DRAFT,
     )
 
     def __str__(self):
