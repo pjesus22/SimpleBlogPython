@@ -1,4 +1,5 @@
 from django.contrib.auth.models import AbstractUser, BaseUserManager
+from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models.signals import post_save
 from django.dispatch import receiver
@@ -26,6 +27,14 @@ class User(AbstractUser):
 
     def __str__(self):
         return f'{self.username} ({self.role})'
+
+    def clean(self):
+        super().clean()
+        allowed_fields = {'username', 'email', 'password'}
+        for field in self.__dict__:
+            value = getattr(self, field)
+            if field in allowed_fields and value in ['', None]:
+                raise ValidationError({field: ['This field cannot be empty or null.']})
 
 
 class AdminManager(BaseUserManager):
@@ -61,11 +70,6 @@ class AuthorProfile(models.Model):
         on_delete=models.CASCADE,
         primary_key=True,
         related_name='profile',
-    )
-    profile_picture = models.ImageField(
-        upload_to='profiles/',
-        blank=True,
-        null=True,
     )
     bio = models.TextField(blank=True)
 
