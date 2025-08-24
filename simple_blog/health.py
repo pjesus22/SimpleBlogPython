@@ -11,22 +11,28 @@ from django.views.decorators.http import require_GET
 
 logger = logging.getLogger(__name__)
 
-# Track application start time for uptime calculation
 START_TIME = time.time()
+
+
+def check_database():
+    """
+    Returns a dict with database health info
+    """
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute('SELECT 1')
+            cursor.fetchone()
+        return {'status': 'ok'}
+    except Exception as e:
+        logger.error(f'Health check database error: {e}')
+        return {'status': 'error', 'message': str(e)}
 
 
 @never_cache
 @require_GET
 def health_check(request):
     """
-    Health check endpoint for monitoring and orchestration systems.
-
-    Checks:
-    - Database connection
-    - Application uptime
-    - Basic system info
-
-    Returns a JSON response with health status and metrics.
+    Health check endpoint.
     """
     health_data = {
         'status': 'ok',
@@ -35,32 +41,22 @@ def health_check(request):
         'uptime_seconds': int(time.time() - START_TIME),
     }
 
-    # Check database connection
-    try:
-        with connection.cursor() as cursor:
-            cursor.execute('SELECT 1')
-            cursor.fetchone()
-        health_data['database'] = {'status': 'ok'}
-    except Exception as e:
+    # Database
+    db_status = check_database()
+    health_data['database'] = db_status
+    if db_status['status'] != 'ok':
         health_data['status'] = 'error'
-        health_data['database'] = {'status': 'error', 'message': str(e)}
-        logger.error(f'Health check database error: {e}')
 
-    # Check environment
-    health_data['environment'] = (
-        settings.ENVIRONMENT if hasattr(settings, 'ENVIRONMENT') else 'unknown'
-    )
+    # Enviroment
+    health_data['environment'] = getattr(settings, 'ENVIRONMENT', 'unknown')
 
-    # Include additional system metrics
+    # Metrics
     health_data['metrics'] = {
         'python_version': os.getenv('PYTHONVERSION', '3.x'),
         'debug_mode': settings.DEBUG,
     }
 
-    # Return status code based on overall health
     status_code = 200 if health_data['status'] == 'ok' else 503
-
-    # Format according to the API standard
     response_data = {'data': health_data}
 
     return JsonResponse(response_data, status=status_code)
