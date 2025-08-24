@@ -72,17 +72,39 @@ class JsonApiResponseBuilder:
         errors = []
         for field, messages in error_dict.items():
             for message in messages:
+                error_context = {
+                    **({'field': field} if field != '__all__' else {}),
+                    'timestamp': datetime.now().isoformat(),
+                    **(meta or {}),
+                }
+
                 errors.append(
                     JsonApiError(
                         status=str(status_code),
                         title=title,
                         detail=message,
-                        meta={
-                            **(meta or {}),
-                            'field': field,
-                            'timestamp': datetime.now().isoformat(),
-                        },
+                        meta=error_context if error_context else None,
                     )
                 )
+        payload = JsonApiResponseBuilder._build_response(errors=errors)
+        return JsonResponse(payload, status=status_code)
+
+    @staticmethod
+    def validation_errors_from_list(
+        error_list: List[str],
+        status_code: int = 400,
+        title: str = 'Bad Request',
+        meta: Optional[Dict] = None,
+    ):
+        errors = []
+        for message in error_list:
+            errors.append(
+                JsonApiError(
+                    status=str(status_code),
+                    title=title,
+                    detail=message,
+                    meta=meta or {'timestamp': datetime.now().isoformat()},
+                )
+            )
         payload = JsonApiResponseBuilder._build_response(errors=errors)
         return JsonResponse(payload, status=status_code)
