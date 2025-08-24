@@ -22,12 +22,27 @@ def validate_invalid_fields(data, allowed_fields) -> None:
         raise ValidationError(message_dict, code='invalid_fields')
 
 
+# DEPRECATED: Use the improved version below.
+# def get_valid_tags_or_404(tag_slugs):
+#     if not isinstance(tag_slugs, (list, set, tuple)):
+#         raise ValidationError({'__all__': ['Tags must be a list, set, or tuple.']})
+#     tag_slugs = set(tag_slugs)
+#     tags = {tag.slug: tag for tag in Tag.objects.filter(slug__in=tag_slugs)}
+#     missing = tag_slugs - tags.keys()
+#     if missing:
+#         raise Http404(f'The following tags were not found: {", ".join(missing)}.')
+#     return tags
+
+
 def get_valid_tags_or_404(tag_slugs):
     if not isinstance(tag_slugs, (list, set, tuple)):
-        raise ValueError('"tags" must be a list.')
-    tag_slugs = set(tag_slugs)
-    tags = {tag.slug: tag for tag in Tag.objects.filter(slug__in=tag_slugs)}
-    missing = tag_slugs - tags.keys()
+        raise ValidationError({'__all__': ['Tags must be a list, set, or tuple.']})
+
+    tags = Tag.objects.filter(slug__in=tag_slugs)
+    found_slugs = tags.values_list('slug', flat=True)
+    missing = set(tag_slugs) - set(found_slugs)
+
     if missing:
-        raise Http404(f'Tags not found: {", ".join(missing)}')
+        raise Http404(f'The following tags were not found: {", ".join(missing)}.')
+
     return tags
