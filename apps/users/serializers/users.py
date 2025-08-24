@@ -87,7 +87,6 @@ class UserSerializer:
             'id': str(profile.user.pk),
             'attributes': {
                 'bio': profile.bio,
-                'profile_picture': profile.profile_picture.name,
             },
             'relationships': {},
         }
