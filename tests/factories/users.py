@@ -39,7 +39,6 @@ class AuthorProfileFactory(factory.django.DjangoModelFactory):
         model = AuthorProfile
         django_get_or_create = ('user',)
 
-    profile_picture = factory.django.ImageField(color='red')
     bio = factory.Faker('text', max_nb_chars=500)
 
     @classmethod
