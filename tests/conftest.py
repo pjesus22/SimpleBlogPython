@@ -54,7 +54,7 @@ def csrf_client():
 
 @pytest.fixture
 def logged_admin_client(admin_factory, csrf_client):
-    user = admin_factory.create(username='test-admin')
+    user = admin_factory.create(username='test_admin')
     csrf_client.force_login(user)
     response = csrf_client.get('/api/v1/auth/csrf-token/')
     csrf_token = response.cookies['csrftoken'].value
@@ -64,7 +64,7 @@ def logged_admin_client(admin_factory, csrf_client):
 
 @pytest.fixture
 def logged_author_client(author_factory, csrf_client):
-    user = author_factory.create(username='test-author')
+    user = author_factory.create(username='test_author')
     csrf_client.force_login(user)
     response = csrf_client.get('/api/v1/auth/csrf-token/')
     csrf_token = response.cookies['csrftoken'].value
