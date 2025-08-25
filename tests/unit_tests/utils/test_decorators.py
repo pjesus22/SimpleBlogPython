@@ -1,7 +1,6 @@
 import json
 
 import pytest
-from django.contrib.auth.models import AnonymousUser
 from django.http import JsonResponse
 from django.test import RequestFactory
 
@@ -13,115 +12,119 @@ from apps.utils.decorators import (
     roles_required,
 )
 
-pytestmark = pytest.mark.django_db
-
 
 @pytest.fixture
 def rf():
     return RequestFactory()
 
 
-def mock_get_view(request):
-    return JsonResponse({'success': True}, status=200)
+def dummy_view(request):
+    return JsonResponse({'success': True})
+
+
+class DummyUser:
+    def __init__(self, role=None, is_authenticated=True):
+        self.role = role
+        self.is_authenticated = is_authenticated
 
 
 @pytest.mark.parametrize(
-    'user, expected_status', [('valid_user', 200), ('anon_user', 401)]
+    'user_role,allowed_roles,expected_status,expected_success',
+    [
+        ('admin', ['admin'], 200, True),
+        ('author', ['admin'], 403, False),
+        ('author', ['author', 'admin'], 200, True),
+        ('None', ['admin'], 403, False),
+    ],
 )
-def test_login_required_decorator(rf, author_factory, user, expected_status):
+def test_roles_required(
+    rf, user_role, allowed_roles, expected_status, expected_success
+):
     request = rf.get('/fake-url/')
-    match user:
-        case 'valid_user':
-            request.user = author_factory()
-        case 'anon_user':
-            request.user = AnonymousUser()
+    request.user = DummyUser(role=user_role, is_authenticated=True)
 
-    decorator_view = login_required(mock_get_view)
-    response = decorator_view(request)
-
+    decorated_view = roles_required(allowed_roles, dummy_view)
+    response = decorated_view(request)
     response_data = json.loads(response.content.decode())
 
     assert response.status_code == expected_status
-    if expected_status == 200:
-        assert response_data.get('success')
+
+    if expected_success:
+        assert response_data.get('success') is True
     else:
-        assert {
-            'status': '401',
-            'title': 'Unauthorized',
-            'detail': 'User must be authenticated to access this resource.',
-        } in response_data['errors']
+        assert 'errors' in response_data
+        assert response_data['errors'][0]['status'] == str(expected_status)
+        assert response_data['errors'][0]['title'] == 'Forbidden'
 
 
-@pytest.mark.parametrize(
-    'user_fixture, decorator',
-    [
-        ('author_factory', 'roles_required'),
-        ('admin_factory', 'roles_required'),
-        ('admin_factory', 'admin_required'),
-        ('admin_factory', 'admin_or_author_required'),
-        ('author_factory', 'admin_or_author_required'),
-    ],
-)
-def test_role_required_decorator(
-    rf, author_factory, admin_factory, user_fixture, decorator
-):
+def test_admin_required_success(rf):
     request = rf.get('/fake-url/')
+    request.user = DummyUser(role='admin', is_authenticated=True)
 
-    match user_fixture:
-        case 'author_factory':
-            request.user = author_factory.create()
-        case 'admin_factory':
-            request.user = admin_factory.create()
-
-    match decorator:
-        case 'roles_required':
-            decorator_view = roles_required(['admin'], mock_get_view)
-        case 'admin_or_author_required':
-            decorator_view = admin_or_author_required(mock_get_view)
-        case 'admin_required':
-            decorator_view = admin_required(mock_get_view)
-
-    response = decorator_view(request)
+    decorated_view = admin_required(dummy_view)
+    response = decorated_view(request)
     response_data = json.loads(response.content.decode())
 
-    if decorator == 'roles_required' and request.user.role == 'author':
-        expected_error = {
-            'status': '403',
-            'title': 'Forbidden',
-            'detail': 'User does not have permission to access this resource.',
-        }
+    assert response.status_code == 200
+    assert response_data.get('success') is True
 
-        assert response.status_code == 403
-        assert expected_error in response_data.get('errors', [])
-    else:
+
+@pytest.mark.parametrize('user_role', [('admin'), ('author')])
+def test_admin_or_author_required_success(rf, user_role):
+    request = rf.get('/fake-url/')
+    request.user = DummyUser(role=user_role, is_authenticated=True)
+
+    decorated_view = admin_or_author_required(dummy_view)
+    response = decorated_view(request)
+    response_data = json.loads(response.content.decode())
+
+    assert response.status_code == 200
+    assert response_data.get('success') is True
+
+
+@pytest.mark.parametrize('authenticated', [True, False])
+def test_login_required(rf, authenticated):
+    request = rf.get('/fake-url/')
+    request.user = DummyUser(role='admin', is_authenticated=authenticated)
+
+    decorated_view = login_required(dummy_view)
+    response = decorated_view(request)
+    response_data = json.loads(response.content.decode())
+
+    if authenticated:
         assert response.status_code == 200
-        assert response_data.get('success')
+        assert response_data.get('success') is True
+    else:
+        errors = response_data['errors'][0]
+        assert response.status_code == 401
+        assert errors['status'] == '401'
+        assert errors['title'] == 'Unauthorized'
+        assert errors['detail'] == (
+            'User must be authenticated to access this resource.'
+        )
+        assert 'meta' in errors
 
 
-@pytest.mark.parametrize(
-    'method, expected_status, expected_detail',
-    [
-        ('GET', 200, None),
-        ('POST', 405, 'Method POST is not allowed for this endpoint.'),
-    ],
-)
-def test_require_http_methods_json_response_decorator(
-    rf, method, expected_status, expected_detail
-):
-    request_method = getattr(rf, method.lower())
-    request = request_method('/fake-url/')
+@pytest.mark.parametrize('method', [['GET'], ['POST']])
+def test_require_http_methods_json_response_allows_method(rf, method):
+    request = rf.get('/fake-url/')
+    request.user = DummyUser(role='admin', is_authenticated=True)
 
-    decorator_view = require_http_methods_json_response(['GET'])(mock_get_view)
-    response = decorator_view(request)
-
+    decorated_view = require_http_methods_json_response(allowed_methods=method)(
+        dummy_view
+    )
+    response = decorated_view(request)
     response_data = json.loads(response.content.decode())
 
-    assert response.status_code == expected_status
-    if expected_status == 200:
-        assert response_data.get('success')
+    if method[0] == 'GET':
+        assert response.status_code == 200
+        assert response_data.get('success') is True
     else:
-        assert {
-            'status': '405',
-            'title': 'Method Not Allowed',
-            'detail': expected_detail,
-        } in response_data['errors']
+        errors = response_data['errors'][0]
+        assert response.status_code == 405
+        assert errors['status'] == '405'
+        assert errors['title'] == 'Method Not Allowed'
+        assert errors['detail'] == (
+            f'Method {request.method} is not allowed for this endpoint.'
+        )
+        assert 'meta' in errors
