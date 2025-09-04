@@ -4,7 +4,13 @@ import pytest
 def build_expected_error(
     detail: str, status: int = 400, title: str = None, meta: dict = None
 ):
-    titles = {400: 'Bad Request', 404: 'Not Found', 500: 'Internal Server Error'}
+    titles = {
+        400: 'Bad Request',
+        404: 'Not Found',
+        500: 'Internal Server Error',
+        403: 'Forbidden',
+        401: 'Unauthorized',
+    }
     return {
         'status': str(status),
         'title': title or titles.get(status, 'Error'),
