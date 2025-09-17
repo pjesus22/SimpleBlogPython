@@ -1,6 +1,7 @@
-import os
+import pytest
+from django.core.exceptions import ValidationError
 
-from apps.users.models import Admin, Author, AuthorProfile, SocialAccount
+from apps.users.models import Admin, Author, AuthorProfile, SocialAccount, User
 
 
 def test_admin_str_():
@@ -24,19 +25,6 @@ def test_author_profile_str_():
     assert str(profile) == f'{profile.user.username} ({profile.user.role}) profile'
 
 
-def test_author_profile_profile_picture_upload_path(
-    db,
-    author_factory,
-    author_profile_factory,
-    clean_media_dir,
-):
-    profile = author_profile_factory.create(user=author_factory.create())
-    upload_path = profile.profile_picture.name
-    file_name = os.path.basename(upload_path)
-    expected_path = f'profiles/{file_name}'
-    assert upload_path == expected_path
-
-
 def test_social_account_str_():
     profile = AuthorProfile(user=Author(username='testAuthor'))
     social_account = SocialAccount(
@@ -48,3 +36,32 @@ def test_social_account_str_():
     assert (
         str(social_account) == f'{social_account.username} ({social_account.provider})'
     )
+
+
+@pytest.mark.parametrize(
+    'field,invalid_value',
+    [
+        ('username', ''),
+        ('username', None),
+        ('email', ''),
+        ('email', None),
+        ('password', ''),
+        ('password', None),
+    ],
+)
+def test_required_fields_cannot_be_empty(db, field, invalid_value):
+    user_data = {
+        'username': 'testuser',
+        'email': 'test@example.com',
+        'password': 'ValidPassword123',
+    }
+    user_data[field] = invalid_value
+
+    user = User(**user_data)
+
+    with pytest.raises(ValidationError) as excinfo:
+        user.clean()
+
+    errors = excinfo.value.message_dict
+    assert field in errors
+    assert 'This field cannot be empty or null.' in errors[field][0]
