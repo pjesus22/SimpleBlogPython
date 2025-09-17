@@ -1,111 +1,164 @@
 import json
 
-import pytest
+# import pytest
 from django.urls import reverse
 
-from apps.users.models import User
+from tests.unit_tests.api.conftest import build_expected_error
 
 
-@pytest.fixture
-def author_user(db, author_factory):
-    return author_factory.create(username='author', email='author@example.com')
+def test_patch_user_success(db, logged_admin_client, author_factory):
+    user = author_factory.create()
+    url = reverse('user-detail', kwargs={'pk': user.pk})
+    payload = {'email': 'updated@email.com', 'password': 'newpassword123'}
 
-
-def test_patch_user_success(db, logged_admin_client, author_user):
-    url = reverse('user-detail', kwargs={'pk': author_user.pk})
-    payload = {'email': 'updated@email.com'}
     response = logged_admin_client.patch(
-        path=url,
-        data=payload,
-        content_type='application/json',
+        path=url, data=payload, content_type='application/json'
     )
+    response_data = response.json()
 
     assert response.status_code == 200
-    assert response.json()['data']['attributes']['email'] == 'updated@email.com'
+    assert response_data['data']['attributes']['email'] == 'updated@email.com'
 
 
 def test_patch_user_not_found(db, logged_admin_client):
     url = reverse('user-detail', kwargs={'pk': 1000})
     payload = {'email': 'updated@email.com'}
+
     response = logged_admin_client.patch(
         url, data=payload, content_type='application/json'
+    )
+    response_data = response.json()
+
+    expected = build_expected_error(
+        detail='No User matches the given query.',
+        status=404,
+        meta=response_data['errors'][0]['meta'],
     )
 
     assert response.status_code == 404
-    assert response.json()['error'] == 'User not found'
+    assert expected in response_data.get('errors')
 
 
-def test_patch_user_does_not_have_permission(db, logged_author_client, author_user):
-    url = reverse('user-detail', kwargs={'pk': author_user.pk})
+def test_patch_user_does_not_have_permission(db, logged_author_client, author_factory):
+    user = author_factory.create()
+    url = reverse('user-detail', kwargs={'pk': user.pk})
     payload = {'email': 'updated@email.com'}
+
     response = logged_author_client.patch(
         url, data=payload, content_type='application/json'
     )
+    response_data = response.json()
+
+    expected = build_expected_error(
+        detail='You do not have permission to edit this user.',
+        status=403,
+        meta=response_data['errors'][0]['meta'],
+    )
 
     assert response.status_code == 403
-    assert response.json()['error'] == 'Permission denied'
+    assert expected in response_data.get('errors')
 
 
-def test_patch_user_invalid_fields(db, logged_admin_client, author_user):
-    url = reverse('user-detail', kwargs={'pk': author_user.pk})
-    payload = {
-        'email': 'updated@email.com',
-        'invalid': 'invalid',
-    }
+def test_patch_user_invalid_fields(db, logged_admin_client, author_factory):
+    user = author_factory.create()
+    url = reverse('user-detail', kwargs={'pk': user.pk})
+    payload = {'invalid': 'invalid'}
+
     response = logged_admin_client.patch(
-        path=url,
-        data=payload,
-        content_type='application/json',
+        path=url, data=payload, content_type='application/json'
+    )
+    response_data = response.json()
+
+    expected = build_expected_error(
+        detail='This field is not allowed.',
+        status=400,
+        meta=response_data['errors'][0]['meta'],
     )
 
     assert response.status_code == 400
-    assert response.json() == {'error': 'Invalid fields: invalid'}
+    assert expected in response_data.get('errors')
 
 
-def test_patch_user_json_decode_error(db, logged_admin_client, author_user):
-    url = reverse('user-detail', kwargs={'pk': author_user.pk})
+def test_patch_user_json_decode_error(db, logged_admin_client, author_factory):
+    user = author_factory.create()
+    url = reverse('user-detail', kwargs={'pk': user.pk})
     payload = "'{invalid json"
 
-    response = logged_admin_client.patch(
-        path=url,
-        data=payload,
+    response = logged_admin_client.patch(path=url, data=payload)
+    response_data = response.json()
+
+    expected = build_expected_error(
+        detail='Expecting value: line 1 column 1 (char 0)',
+        status=400,
+        meta=response_data['errors'][0]['meta'],
     )
 
     assert response.status_code == 400
-    assert response.json()['error'] == 'Expecting value'
+    expected in response_data.get('errors')
 
 
-def test_patch_user_validation_error(db, logged_admin_client, author_user):
-    url = reverse('user-detail', kwargs={'pk': author_user.pk})
-    payload = {
-        'username': (
-            'Lorem ipsum dolor sit amet, consectetuer '
-            'adipiscing elit. Aenean commodo ligula eget dolor.'
-        ),
-    }
+def test_patch_user_validation_error(db, logged_admin_client, author_factory):
+    user = author_factory.create()
+    url = reverse('user-detail', kwargs={'pk': user.pk})
+    payload = {'username': 'x' * 151}
 
     response = logged_admin_client.patch(
-        path=url,
-        data=json.dumps(payload),
-        content_type='application/json',
+        path=url, data=json.dumps(payload), content_type='application/json'
+    )
+    response_data = response.json()
+
+    expected = build_expected_error(
+        detail='Ensure this value has at most 150 characters (it has 151).',
+        status=400,
+        meta=response_data['errors'][0]['meta'],
     )
 
     assert response.status_code == 400
-    assert 'username' in response.json()['error']
+    assert expected in response_data.get('errors')
 
 
-def test_patch_user_generic_exception(db, logged_admin_client, override, author_user):
-    def fake_save(*args, **kwargs):
-        raise Exception('Something went wrong')
-
+def test_patch_user_generic_exception(
+    db, logged_admin_client, author_factory, monkeypatch, fake_method_factory
+):
+    user = author_factory.create()
+    url = reverse('user-detail', kwargs={'pk': user.pk})
     payload = {'email': 'updated@email.com'}
 
-    with override(User, 'save', fake_save):
-        response = logged_admin_client.patch(
-            path=reverse('user-detail', kwargs={'pk': author_user.pk}),
-            data=json.dumps(payload),
-            content_type='application/json',
-        )
+    monkeypatch.setattr(
+        'apps.users.views.users.User.save',
+        fake_method_factory(raise_exception=Exception('Something went wrong.')),
+    )
+
+    response = logged_admin_client.patch(
+        path=url, data=json.dumps(payload), content_type='application/json'
+    )
+    response_data = response.json()
+
+    expected = build_expected_error(
+        detail='Something went wrong.',
+        status=500,
+        meta=response_data['errors'][0]['meta'],
+    )
 
     assert response.status_code == 500
-    assert 'Something went wrong' in response.json()['error']
+    assert expected in response_data.get('errors')
+
+
+def test_patch_user_invalid_password(db, logged_admin_client, author_factory):
+    user = author_factory.create()
+    url = reverse('user-detail', kwargs={'pk': user.pk})
+    payload = {'password': 'short'}
+
+    response = logged_admin_client.patch(
+        path=url, data=json.dumps(payload), content_type='application/json'
+    )
+    response_data = response.json()
+
+    expected = build_expected_error(
+        detail='This password is too short. It must contain at least 8 characters.',
+        status=400,
+        meta=response_data['errors'][0]['meta'],
+    )
+
+    assert response.status_code == 400
+    assert expected in response_data.get('errors')
