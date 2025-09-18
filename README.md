@@ -1,455 +1,304 @@
-# Simple Blog
+# Simple Blog API
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Python](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
+[![Django](https://img.shields.io/badge/django-5.1+-green.svg)](https://djangoproject.com/)
+[![Code style: ruff](https://img.shields.io/badge/code%20style-ruff-blue.svg)](https://github.com/astral-sh/ruff)
 
-A Django-only blog API with secure authentication, HTTPS support, and Docker deployment configuration.
+A robust Django-based blog REST API with secure authentication, HTTPS support, and comprehensive content management. Built with modern Python practices and production-ready deployment configuration.
 
-## Table of Contents
+## ✨ Features
 
-- [Simple Blog](#simple-blog)
-  - [Table of Contents](#table-of-contents)
-  - [Features](#features)
-  - [Technology Stack](#technology-stack)
-  - [Prerequisites](#prerequisites)
-  - [Getting Started](#getting-started)
-    - [Docker Setup (Recommended)](#docker-setup-recommended)
-    - [Manual Setup](#manual-setup)
-  - [API Documentation](#api-documentation)
-    - [Response Format](#response-format)
-    - [Error Handling](#error-handling)
-    - [Rate Limiting](#rate-limiting)
-    - [API Versioning](#api-versioning)
-    - [Authentication](#authentication)
-      - [Get CSRF Token](#get-csrf-token)
-      - [Login](#login)
-    - [API Endpoints](#api-endpoints)
-      - [Categories](#categories)
-    - [Example Responses](#example-responses)
-      - [List Categories](#list-categories)
-      - [Single Category](#single-category)
-  - [Directory Structure](#directory-structure)
-    - [Running Tests](#running-tests)
-    - [Code Style](#code-style)
-    - [Making Changes](#making-changes)
-  - [Development Tools](#development-tools)
-    - [API Documentation Endpoint](#api-documentation-endpoint)
-    - [Health Check](#health-check)
-  - [Production Deployment](#production-deployment)
-  - [Security Considerations](#security-considerations)
-  - [Troubleshooting](#troubleshooting)
-    - [Common Issues](#common-issues)
-    - [Container Logs](#container-logs)
-  - [Contributing](#contributing)
-  - [License](#license)
-  - [Security](#security)
-  - [Changelog](#changelog)
+- 🔐 **Secure Authentication**: Session-based authentication with CSRF protection
+- 🔒 **HTTPS/SSL Support**: Self-signed certificates for development + Let's Encrypt ready for production
+- 🐳 **Docker Ready**: Complete Docker and Docker Compose setup
+- 📝 **Content Management**: Full CRUD operations for posts, categories, tags, and media files
+- 👥 **User Management**: Role-based access control (Admin/Author) with profile management
+- 📱 **Social Integration**: Social account management for author profiles
+- 🌐 **RESTful API**: JSON:API specification compliant responses
+- ⏱️ **Rate Limiting**: Configurable rate limits for authenticated and anonymous users
+- 🔄 **API Versioning**: URL-based versioning for backward compatibility
+- 🧪 **Test Suite**: Comprehensive test coverage with pytest
+- ✨ **Code Quality**: Automated formatting and linting with ruff
+- 📊 **Health Monitoring**: Built-in health check endpoint
+- 📖 **Documentation**: Comprehensive API documentation
 
-## Features
+## 🛠️ Technology Stack
 
-- 🔐 Secure authentication system with session-based auth and CSRF protection
-- 🔒 HTTPS/SSL support (self-signed default + Let's Encrypt/Certbot template)
-- 🐳 Docker and Docker Compose setup
-- 💾 Persistent data storage configuration
-- 🚀 Production-ready configuration with Gunicorn and Nginx
-- 📝 Content management system with categories, posts, and tags
-- 🌐 RESTful API with proper response formatting and error handling
-- ⏱️ Rate limiting for both authenticated and anonymous users
-- 🔄 API versioning (v1, v2)
-- 🧪 Test suite with pytest
-- ✨ Code quality checks with ruff
-- 📖 Documentation with detailed setup and usage instructions
+- **Backend**: Python 3.12, Django 5.1
+- **Database**: SQLite (PostgreSQL ready)
+- **Web Server**: Nginx + Gunicorn
+- **Containerization**: Docker & Docker Compose
+- **Testing**: pytest, pytest-django, factory_boy
+- **Code Quality**: ruff, pre-commit hooks
+- **Security**: HTTPS, CSRF protection, secure sessions
 
-## Technology Stack
+## 📋 Prerequisites
 
-- Python 3.12
-- Django 5.1
-- SQLite Database
-- Nginx
-- Docker & Docker Compose
-- Gunicorn
+- **Docker & Docker Compose** (recommended for quick setup)
+- **Python 3.12+** (for local development)
+- **OpenSSL** (for SSL certificate generation)
 
-## Prerequisites
-
-- Docker and Docker Compose
-- Python 3.12+ (for local development)
-- OpenSSL (for certificate generation)
-
-## Getting Started
+## 🚀 Quick Start
 
 ### Docker Setup (Recommended)
 
-1. **Clone the Repository**
-
+1. **Clone the repository**
    ```bash
-   git clone https://github.com/{YOUR_USERNAME}/simple_blog.git
+   git clone <your-repo-url>
    cd simple_blog
    ```
 
-2. **Environment Setup**
-
-   Create either a `.env.production` or `.env.local` file (or both) from the example:
-
+2. **Environment setup**
    ```bash
    cp .env.example .env.production
-   # Edit the .env file with your preferred settings
+   # Edit .env.production with your settings
    ```
 
-3. **Build and Run with Docker**
-
+3. **Run with Docker**
    ```bash
    docker compose up -d
    ```
 
-4. **Test the application**
+4. **Verify installation**
+   ```bash
+   curl -k https://localhost/health/
+   ```
 
-   Test the application is running at `http://localhost/health`.
+The API will be available at:
+- **HTTPS**: https://localhost (production)
+- **HTTP**: http://localhost (development)
 
 ### Manual Setup
 
-If you prefer to run the application without Docker, follow these steps:
+For local development without Docker:
 
-1. **Clone the Repository**
-
+1. **Clone and setup Python environment**
    ```bash
-   git clone https://github.com/{YOUR_USERNAME}/blog_apiv2.git
-   cd blog_apiv2
-   ```
-
-2. **Set Up Python Environment**
-
-   Ensure you have Python 3.12 installed, then create a virtual environment:
-
-   ```bash
+   git clone <your-repo-url>
+   cd simple_blog
    python3.12 -m venv .venv
    source .venv/bin/activate  # Linux/macOS
-   .venv\Scripts\activate     # Windows
+   # .venv\Scripts\activate   # Windows
    ```
 
-3. **Install Dependencies**
-
+2. **Install dependencies**
    ```bash
    pip install -e ".[dev,test]"
    ```
 
-4. **Environment Setup**
-
-   Create a `.env.production` or `.env.local` file (or both) from the example:
-
+3. **Environment configuration**
    ```bash
-   cp .env.example .env.production # Edit .env file with your preferred settings
+   cp .env.example .env.local
+   # Edit .env.local for development settings
    ```
 
-5. **Create Storage Directories**
-
+4. **Database setup**
    ```bash
    mkdir -p storage/{data,static,media}
-   chmod -R 777 storage/
-   ```
-
-6. **Run Database Migrations**
-
-   ```bash
+   chmod 755 storage/
    ./manage.py migrate
-   ```
-
-7. **Create Superuser**
-
-   ```bash
    ./manage.py createsuperuser
-   ```
-
-8. **Collect Static Files**
-
-   ```bash
    ./manage.py collectstatic
    ```
 
-9. **Generate SSL Certificates (Optional)**
-
-   For local development, you can generate self-signed SSL certificates:
-
+5. **Run development server**
    ```bash
-   mkdir -p nginx/certs
-   openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
-       -keyout nginx/certs/nginx.key -out nginx/certs/nginx.crt \
-       -subj "/C=US/ST=State/L=City/O=Organization/CN=localhost" \
-       -addext "subjectAltName = DNS:localhost,IP:127.0.0.1"
+   ./manage.py runserver
    ```
 
-10. **Run the Development Server**
+## 📚 API Documentation
 
-    ```bash
-    ./manage.py runserver
-    ```
+### Base URL
 
-    The application should now be running at `http://localhost:8000`.
-
-11. **Setting Up Nginx** (Optional)
-
-    If you want to use Nginx:
-
-    - Install Nginx on your system
-    - Copy the Nginx configuration
-
-      ```bash
-      sudo cp nginx/nginx.conf /etc/nginx/sites-available/simple_blog
-      sudo ln -s /etc/nginx/sites-available/simple_blog /etc/nginx/sites-enabled/
-      ```
-
-    - Modify the Nginx configuration to point to your local setup.
-    - Restart Nginx:
-
-      ```bash
-      sudo service nginx restart
-      ```
-
-12. **Running with Gunicorn**
-
-    For a more production-like setup, use Gunicorn:
-
-    ```bash
-    gunicorn simple_blog.wsgi:application -c gunicorn.conf.py
-    ```
-
-Note: Ensure all necessary environment variables are set in your .env.local file. You may need to adjust paths and settings based on your specific local environment.
-
-## API Documentation
-
-### Response Format
-
-All API responses follow the JSON:API specification:
-
-```json
-{
-    "data": {
-        "type": "categories",
-        "id": "1",
-        "attributes": {
-            "name": "Category Name",
-            "description": "Category Description",
-            "slug": "category-name",
-            "created_at": "2025-04-20T16:13:11.482Z",
-            "updated_at": "2025-04-20T16:13:11.482Z"
-        },
-        "relationships": {}
-    }
-}
-```
-
-### Error Handling
-
-API errors follow a consistent format:
-
-```json
-{
-    "error": {
-        "code": "error_code",
-        "message": "Human-readable error message",
-        "details": {}
-    }
-}
-```
-
-Common HTTP status codes:
-
-- 200: Success
-- 201: Created
-- 400: Bad Request
-- 401: Unauthorized
-- 403: Forbidden
-- 404: Not Found
-- 500: Internal Server Error
-
-### Rate Limiting
-
-The API implements rate limiting to prevent abuse:
-
-- Authenticated users: 100 requests per minute
-- Anonymous users: 20 requests per minute
-
-Rate limit headers are included in all responses:
-
-- `X-RateLimit-Limit`: Maximum requests per window
-- `X-RateLimit-Remaining`: Remaining requests in current window
-- `X-RateLimit-Reset`: Time when the rate limit resets
-
-### API Versioning
-
-The API uses URL versioning (e.g., `/api/v1/`). Major versions may include breaking changes:
-
-- v1: Current stable version
-- v2: This version (includes breaking changes from v1)
+- **Production**: `https://localhost/api/v1`
+- **Development**: `http://localhost:8000/api/v1`
 
 ### Authentication
 
 The API uses session-based authentication with CSRF protection.
 
-#### Get CSRF Token
-
 ```bash
+# Get CSRF token
 curl -k -c cookies.txt -b cookies.txt https://localhost/api/v1/auth/csrf-token/
-```
 
-#### Login
-
-```bash
+# Login
 curl -k -X POST \
   -H "Content-Type: application/json" \
   -H "X-CSRFToken: <token>" \
-  -H "Referer: https://localhost" \
   -H "Origin: https://localhost" \
-  -c cookies.txt \
-  -b cookies.txt \
-  -d '{"username":"<username>","password":"<password>"}' \
+  -H "Referer: https://localhost" \
+  -c cookies.txt -b cookies.txt \
+  -d '{"username":"admin","password":"your_password"}' \
   https://localhost/api/v1/auth/login/
 ```
 
-### API Endpoints
+### Core Endpoints
 
-#### Categories
+| Resource | Endpoint | Methods | Description |
+|----------|----------|---------|-------------|
+| **Health** | `/health/` | GET | System health check |
+| **Categories** | `/api/v1/categories/` | GET, POST | Manage blog categories |
+| **Categories** | `/api/v1/categories/{slug}/` | GET, PATCH, DELETE | Individual category operations |
+| **Tags** | `/api/v1/tags/` | GET, POST | Manage blog tags |
+| **Tags** | `/api/v1/tags/{slug}/` | GET, PATCH, DELETE | Individual tag operations |
+| **Posts** | `/api/v1/posts/` | GET, POST | Manage blog posts |
+| **Posts** | `/api/v1/posts/{slug}/` | GET, PATCH, DELETE | Individual post operations |
+| **Media** | `/api/v1/posts/{slug}/media/` | GET, POST | Manage post media files |
+| **Users** | `/api/v1/users/` | GET, POST | User management (admin only) |
+| **Auth** | `/api/v1/auth/login/` | POST | User authentication |
 
-- List Categories: `GET /api/v1/categories/`
-- Create Category: `POST /api/v1/categories/`
-- Get Category: `GET /api/v1/categories/{id}/`
-- Update Category: `PUT /api/v1/categories/{id}/`
-- Delete Category: `DELETE /api/v1/categories/{id}/`
+### Query Parameters
 
-Request example:
+**Posts filtering:**
+- `?category=slug` - Filter by category
+- `?tags=tag1,tag2` - Filter by tags (comma-separated)
+- `?search=query` - Search in title and content
 
-```bash
-curl -k -X POST \
-  -H "Content-Type: application/json" \
-  -H "X-CSRFToken: <token>" \
-  -H "Referer: https://localhost" \
-  -H "Origin: https://localhost" \
-  -c cookies.txt \
-  -b cookies.txt \
-  -d '{"name":"Category Name", "description":"Category Description"}' \
-  https://localhost/api/v1/categories/
-```
+### Response Format
 
-### Example Responses
-
-#### List Categories
+All responses follow JSON:API specification:
 
 ```json
 {
-    "data": [
-        {
-            "type": "categories",
-            "id": "1",
-            "attributes": {
-                "name": "Technology",
-                "description": "Tech-related posts",
-                "slug": "technology",
-                "created_at": "2025-04-20T16:13:11.482Z",
-                "updated_at": "2025-04-20T16:13:11.482Z"
-            },
-            "relationships": {}
-        }
-    ],
-    "meta": {
-        "total": 1,
-        "page": 1,
-        "per_page": 10
+  "data": {
+    "type": "posts",
+    "id": "1",
+    "attributes": {
+      "title": "Sample Post",
+      "content": "Post content...",
+      "status": "published",
+      "created_at": "2024-01-15T10:30:45Z"
+    },
+    "relationships": {
+      "author": {
+        "data": {"type": "users", "id": "1"}
+      }
     }
+  }
 }
 ```
 
-#### Single Category
+### Complete API Reference
 
-```json
-{
-    "data": {
-        "type": "categories",
-        "id": "1",
-        "attributes": {
-            "name": "Technology",
-            "description": "Tech-related posts",
-            "slug": "technology",
-            "created_at": "2025-04-20T16:13:11.482Z",
-            "updated_at": "2025-04-20T16:13:11.482Z"
-        },
-        "relationships": {}
-    }
-}
+For detailed API documentation including all endpoints, parameters, and examples, see [API.md](API.md).
+
+## 🏗️ Project Structure
+
+```
+simple_blog/
+├── apps/                    # Django applications
+│   ├── content/            # Blog content management
+│   │   ├── models/         # Post, Category, Tag models
+│   │   ├── views/          # API views
+│   │   └── serializers/    # JSON:API serializers
+│   ├── media_files/        # File upload handling
+│   ├── users/              # User and profile management
+│   └── utils/              # Shared utilities
+├── simple_blog/            # Project configuration
+│   ├── settings/          # Environment-specific settings
+│   ├── urls.py            # URL routing
+│   └── health.py          # Health check endpoint
+├── tests/                  # Test suite
+│   ├── factories/         # Test data factories
+│   └── unit_tests/        # Unit tests
+├── nginx/                  # Nginx configuration
+│   ├── nginx.conf         # Server configuration
+│   └── certs/             # SSL certificates
+├── storage/               # Persistent data
+│   ├── data/              # Database files
+│   ├── media/             # User uploads
+│   └── static/            # Static assets
+├── docker-compose.yml     # Container orchestration
+├── dockerfile             # Container image
+├── pyproject.toml         # Project metadata
+└── manage.py              # Django management
 ```
 
-## Directory Structure
-
-blog_apiv2/
-├── apps/
-│   ├── content/          # Content management app
-│   ├── media_files/      # Media files handling
-│   └── users/            # User management
-├── docs/               # Project documentation
-│   ├── changelog.md    # Version history
-│   ├── contributing.md # Contribution guidelines
-│   └── security.md     # Security policy
-├── nginx/
-│   ├── certs/           # SSL certificates
-│   └── nginx.conf       # Nginx configuration
-├── simple_blog/         # Project configuration
-├── storage/
-│   ├── data/           # Database files (SQLite)
-│   ├── media/          # User uploaded files
-│   └── static/         # Static files
-├── tests/              # Test suite
-├── .env.production     # Production Environment variables
-├── .env.local          # Local Enviroment variables
-├── .env.example        # Example environment variables
-├── docker-compose.yml  # Docker compose configuration
-├── Dockerfile          # Docker build configuration
-└── README.md           # Project overview
+## 🧪 Development
 
 ### Running Tests
 
 ```bash
-docker compose exec web python manage.py test
+# With Docker
+docker compose exec web python -m pytest
+
+# Local development
+pytest
+
+# With coverage
+pytest --cov=apps --cov-report=html
 ```
 
-### Code Style
-
-The project uses ruff for code formatting and linting:
+### Code Quality
 
 ```bash
-ruff check .
+# Format code
 ruff format .
+
+# Lint code
+ruff check .
+
+# Fix linting issues
+ruff check --fix .
 ```
 
-### Making Changes
+### Pre-commit Hooks
 
-1. Create a new branch
-2. Make your changes
-3. Write/update tests
-4. Run the test suite
-5. Submit a pull request
+```bash
+pre-commit install
+pre-commit run --all-files
+```
 
-## Development Tools
+### Database Management
 
-### API Documentation Endpoint
+```bash
+# Create migrations
+./manage.py makemigrations
 
-The API documentation is available at `/api/docs/` when the server is running. It provides:
+# Apply migrations
+./manage.py migrate
 
-- Interactive API testing
-- Schema details
-- Authentication information
-- Example requests and responses
+# Create superuser
+./manage.py createsuperuser
 
-### Health Check
+# Load sample data (if available)
+./manage.py loaddata fixtures/sample_data.json
+```
 
-A health check endpoint is available at `/health/` to verify system status. It returns:
+## 🔐 User Roles & Permissions
+
+| Role | Permissions |
+|------|-------------|
+| **Admin** | Full access to all resources and operations |
+| **Author** | Create/edit own posts, manage own profile, upload media |
+| **Anonymous** | Read access to published content only |
+
+## 🔒 Security Features
+
+- ✅ HTTPS/TLS encryption with configurable certificates
+- ✅ CSRF protection for state-changing operations
+- ✅ Secure session management
+- ✅ Rate limiting to prevent abuse
+- ✅ Input validation and sanitization
+- ✅ SQL injection prevention via Django ORM
+- ✅ XSS protection with proper output encoding
+- ✅ Secure HTTP headers (HSTS, X-Frame-Options, etc.)
+
+## 📊 Monitoring & Health Checks
+
+### Health Check Endpoint
+
+The `/health/` endpoint provides system status information:
 
 ```json
 {
   "data": {
     "status": "ok",
-    "timestamp": "2025-04-21T21:00:00.000000",
+    "timestamp": "2024-09-18T14:30:45.123456",
     "version": "0.1.0",
-    "uptime_seconds": 1234,
-    "database": {
-      "status": "ok"
-    },
+    "uptime_seconds": 3600,
+    "database": {"status": "ok"},
     "environment": "production",
     "metrics": {
       "python_version": "3.12",
@@ -459,88 +308,152 @@ A health check endpoint is available at `/health/` to verify system status. It r
 }
 ```
 
-## Production Deployment
+### Logging
 
-For production deployment:
+```bash
+# View application logs
+docker compose logs web
 
-1. Use proper SSL certificates instead of self-signed ones
-2. Set appropriate environment variables
-3. Configure proper domain names
+# View nginx logs
+docker compose logs nginx
 
-## Security Considerations
+# Follow logs in real-time
+docker compose logs -f
+```
 
-- SSL/TLS encryption enabled
-- CSRF protection
-- Secure session handling
-- No sensitive data in version control
-- Proper file permissions
+## 🚀 Production Deployment
 
-## Troubleshooting
+### SSL Certificate Setup
+
+**Option 1: Let's Encrypt (Recommended for production)**
+
+1. Uncomment the certbot service in `docker-compose.yml`
+2. Update email and domain in the certbot configuration
+3. Run: `docker compose up certbot`
+
+**Option 2: Self-signed (Development)**
+
+Self-signed certificates are generated automatically via the `certgen` service.
+
+### Environment Variables
+
+Key production settings in `.env.production`:
+
+```env
+# Security
+SECRET_KEY=your-secure-secret-key
+DEBUG=False
+DJANGO_ALLOWED_HOSTS=yourdomain.com,www.yourdomain.com
+
+# Database (optional: switch to PostgreSQL)
+DJANGO_DB_ENGINE=django.db.backends.postgresql
+DJANGO_DB_NAME=simple_blog
+DJANGO_DB_USER=blog_user
+DJANGO_DB_PASSWORD=secure_password
+DJANGO_DB_HOST=db
+DJANGO_DB_PORT=5432
+
+# HTTPS
+CSRF_TRUSTED_ORIGINS=https://yourdomain.com
+SECURE_SSL_REDIRECT=True
+```
+
+### Deployment Checklist
+
+- [ ] Update `DJANGO_ALLOWED_HOSTS` with your domain
+- [ ] Set a secure `SECRET_KEY`
+- [ ] Configure proper SSL certificates
+- [ ] Set `DEBUG=False`
+- [ ] Configure backup strategy for database
+- [ ] Set up monitoring and logging
+- [ ] Configure domain DNS records
+- [ ] Test all API endpoints after deployment
+
+## 🛠️ Troubleshooting
 
 ### Common Issues
 
-1. **Permission Denied for Storage Directory**
-
-   ```bash
-   sudo chown -R $USER:$USER storage/
-   chmod -R 777 storage/
-   ```
-
-2. **SSL Certificate Issues**
-
-   ```bash
-   # Regenerate certificates
-   rm -rf nginx/certs/*
-   openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
-       -keyout nginx/certs/private.key \
-       -out nginx/certs/certificate.crt \
-       -subj "/C=US/ST=State/L=City/O=Organization/CN=localhost"
-   ```
-
-3. **Database Connection Issues**
-
-   - Check if the SQLite database file exists in `storage/data`
-   - Ensure proper permissions on the storage directory
-   - Verify SQLite database settings in `.env` file
-
-4. **CSRF Token Errors**
-
-   - Ensure you're including the Referer and Origin headers
-   - Check that the CSRF token in the header matches the cookie
-   - Verify you're using HTTPS
-
-### Container Logs
-
-View container logs:
-
+**Permission Errors**
 ```bash
-# All logs
-docker compose logs
-
-# Specific service
-docker compose logs web
-docker compose logs nginx
+sudo chown -R $USER:$USER storage/
+chmod 755 storage/
 ```
 
-## Contributing
+**SSL Certificate Issues**
+```bash
+# Regenerate self-signed certificates
+docker compose down
+rm -rf nginx/certs/*
+docker compose up -d
+```
 
-Please see [Contributing Guidelines](docs/contributing.md) for detailed information on:
+**Database Issues**
+```bash
+# Reset database (development only)
+rm storage/data/db.sqlite3
+docker compose exec web python manage.py migrate
+docker compose exec web python manage.py createsuperuser
+```
 
-- Setting up the development environment
-- Coding standards
-- Pull request process
-- Testing requirements
-- Commit message guidelines
-- Branch naming conventions
+**CSRF Token Errors**
+- Ensure `Origin` and `Referer` headers match your domain
+- Verify HTTPS is being used for secure cookies
+- Check `CSRF_TRUSTED_ORIGINS` setting
 
-## License
+### Debug Mode
 
-[MIT License](LICENSE)
+For troubleshooting, temporarily enable debug mode:
 
-## Security
+```env
+DEBUG=True
+```
 
-Please see our [Security Policy](docs/security.md) for information on reporting security vulnerabilities.
+**⚠️ Remember to disable debug mode in production!**
 
-## Changelog
+## 🤝 Contributing
 
-For version history and release notes, see the [Changelog](docs/changelog.md).
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Make your changes
+4. Run tests (`pytest`)
+5. Run code quality checks (`ruff check .`)
+6. Commit changes (`git commit -m 'Add amazing feature'`)
+7. Push to branch (`git push origin feature/amazing-feature`)
+8. Open a Pull Request
+
+### Development Guidelines
+
+- Follow PEP 8 style guidelines
+- Write tests for new features
+- Update documentation as needed
+- Use meaningful commit messages
+- Ensure all tests pass before submitting
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 👨‍💻 Author
+
+**Jesús A. Perales** - *Initial work and maintenance*
+
+## 🔗 Links
+
+- [API Documentation](API.md) - Complete API reference
+- [Change Log](API_CHANGES_SUMMARY.md) - Recent documentation updates
+- [Issues](../../issues) - Report bugs or request features
+
+## 📝 Changelog
+
+### Version 0.1.0 (Current)
+- Initial release with complete blog API functionality
+- User authentication and authorization system
+- Content management (posts, categories, tags)
+- Media file handling
+- Docker deployment setup
+- Comprehensive test suite
+- API documentation
+
+---
+
+**⭐ If this project helped you, please consider giving it a star!**
