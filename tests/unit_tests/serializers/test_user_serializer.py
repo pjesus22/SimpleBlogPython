@@ -63,7 +63,6 @@ def test_build_included_data_includes_correct_post_details(
             'id': str(profile.user.pk),
             'attributes': {
                 'bio': profile.bio,
-                'profile_picture': profile.profile_picture.name,
             },
             'relationships': {
                 'social_accounts': {
