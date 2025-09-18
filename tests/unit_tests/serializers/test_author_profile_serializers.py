@@ -19,7 +19,6 @@ def test_serialize_profile_includes_relationships_when_requested(
         'id': str(profile.pk),
         'attributes': {
             'bio': profile.bio,
-            'profile_picture': profile.profile_picture.name,
         },
         'relationships': {
             'social_accounts': {
