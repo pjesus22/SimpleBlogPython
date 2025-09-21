@@ -1,3 +1,7 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "simple_blog"
 version = "0.1.0"
@@ -13,7 +17,7 @@ dependencies = [
     "requests>=2.32.4",
 ]
 
-[dependency-groups]
+[project.optional-dependencies]
 dev = [
     "django-extensions>=3.2.3",
     "ipython>=9.0.1",
@@ -48,3 +52,6 @@ omit = [
 	"tests/conftest.py",
 	"manage.py"
 ]
+
+[tool.setuptools]
+packages.find = {}
