@@ -9,19 +9,21 @@ A robust Django-based blog REST API with secure authentication, HTTPS support, a
 
 ## ✨ Features
 
-- 🔐 **Secure Authentication**: Session-based authentication with CSRF protection
+- 🔐 **Secure Authentication**: Session-based authentication with CSRF protection, login/logout endpoints
 - 🔒 **HTTPS/SSL Support**: Self-signed certificates for development + Let's Encrypt ready for production
-- 🐳 **Docker Ready**: Complete Docker and Docker Compose setup
+- 🐳 **Docker Ready**: Complete Docker and Docker Compose setup with health checks
 - 📝 **Content Management**: Full CRUD operations for posts, categories, tags, and media files
-- 👥 **User Management**: Role-based access control (Admin/Author) with profile management
-- 📱 **Social Integration**: Social account management for author profiles
-- 🌐 **RESTful API**: JSON:API specification compliant responses
+- 👥 **User Management**: Role-based access control (Admin/Author) with comprehensive profile management
+- 📱 **Social Integration**: Complete social account CRUD operations for author profiles
+- 🖼️ **Media Handling**: File upload support (images, videos, audio) with metadata extraction
+- 🔍 **Advanced Search**: Posts filtering by category, tags, and full-text search
+- 🌐 **RESTful API**: JSON:API specification compliant responses with relationships
 - ⏱️ **Rate Limiting**: Configurable rate limits for authenticated and anonymous users
 - 🔄 **API Versioning**: URL-based versioning for backward compatibility
-- 🧪 **Test Suite**: Comprehensive test coverage with pytest
-- ✨ **Code Quality**: Automated formatting and linting with ruff
-- 📊 **Health Monitoring**: Built-in health check endpoint
-- 📖 **Documentation**: Comprehensive API documentation
+- 🧪 **Test Suite**: Comprehensive test coverage with pytest and factory_boy
+- ✨ **Code Quality**: Automated formatting and linting with ruff and pre-commit hooks
+- 📊 **Health Monitoring**: Built-in health check endpoint with database status
+- 📖 **Documentation**: Comprehensive API documentation with examples
 
 ## 🛠️ Technology Stack
 
@@ -107,6 +109,8 @@ For local development without Docker:
    ./manage.py runserver
    ```
 
+> **Note**: The `/api/v1/users/` endpoint only creates Author users. Admin users must be created using Django's `./manage.py createsuperuser` command.
+
 ## 📚 API Documentation
 
 ### Base URL
@@ -116,13 +120,13 @@ For local development without Docker:
 
 ### Authentication
 
-The API uses session-based authentication with CSRF protection.
+The API uses session-based authentication with CSRF protection. Complete authentication flow:
 
 ```bash
-# Get CSRF token
+# 1. Get CSRF token
 curl -k -c cookies.txt -b cookies.txt https://localhost/api/v1/auth/csrf-token/
 
-# Login
+# 2. Login with credentials
 curl -k -X POST \
   -H "Content-Type: application/json" \
   -H "X-CSRFToken: <token>" \
@@ -131,22 +135,50 @@ curl -k -X POST \
   -c cookies.txt -b cookies.txt \
   -d '{"username":"admin","password":"your_password"}' \
   https://localhost/api/v1/auth/login/
+
+# 3. Make authenticated requests (use cookies and CSRF token)
+curl -k -X POST \
+  -H "Content-Type: application/json" \
+  -H "X-CSRFToken: <token>" \
+  -H "Origin: https://localhost" \
+  -H "Referer: https://localhost" \
+  -c cookies.txt -b cookies.txt \
+  -d '{"name":"New Category"}' \
+  https://localhost/api/v1/categories/
+
+# 4. Logout when done
+curl -k -X POST \
+  -H "Content-Type: application/json" \
+  -H "X-CSRFToken: <token>" \
+  -H "Origin: https://localhost" \
+  -H "Referer: https://localhost" \
+  -c cookies.txt -b cookies.txt \
+  https://localhost/api/v1/auth/logout/
 ```
 
 ### Core Endpoints
 
-| Resource | Endpoint | Methods | Description |
-|----------|----------|---------|-------------|
-| **Health** | `/health/` | GET | System health check |
-| **Categories** | `/api/v1/categories/` | GET, POST | Manage blog categories |
-| **Categories** | `/api/v1/categories/{slug}/` | GET, PATCH, DELETE | Individual category operations |
-| **Tags** | `/api/v1/tags/` | GET, POST | Manage blog tags |
-| **Tags** | `/api/v1/tags/{slug}/` | GET, PATCH, DELETE | Individual tag operations |
-| **Posts** | `/api/v1/posts/` | GET, POST | Manage blog posts |
-| **Posts** | `/api/v1/posts/{slug}/` | GET, PATCH, DELETE | Individual post operations |
-| **Media** | `/api/v1/posts/{slug}/media/` | GET, POST | Manage post media files |
-| **Users** | `/api/v1/users/` | GET, POST | User management (admin only) |
-| **Auth** | `/api/v1/auth/login/` | POST | User authentication |
+| Resource | Endpoint | Methods | Authorization | Description |
+|----------|----------|---------|---------------|-------------|
+| **Health** | `/health/` | GET | None | System health check |
+| **Categories** | `/api/v1/categories/` | GET, POST | None / Admin | List categories / Create category |
+| **Categories** | `/api/v1/categories/{slug}/` | GET, PATCH, DELETE | None / Admin / Admin | Get category / Update / Delete |
+| **Tags** | `/api/v1/tags/` | GET, POST | None / Admin | List tags / Create tag |
+| **Tags** | `/api/v1/tags/{slug}/` | GET, PATCH, DELETE | None / Admin / Admin | Get tag / Update / Delete |
+| **Posts** | `/api/v1/posts/` | GET, POST | Public posts only / Admin or Author | List posts / Create post |
+| **Posts** | `/api/v1/posts/{slug}/` | GET, PATCH, DELETE | Public posts only / Admin or Post Owner / Admin or Post Owner | Get post / Update / Delete |
+| **Media** | `/api/v1/posts/{slug}/media/` | GET, POST | Public posts only / Admin or Post Owner | List post media / Upload media |
+| **Media** | `/api/v1/posts/{slug}/media/{id}/` | GET, DELETE | Public posts only / Admin or Post Owner | Get media file / Delete media |
+| **Media** | `/api/v1/media/` | GET | Admin | List all media files |
+| **Media** | `/api/v1/media/{id}/` | GET | Admin | Get media file details |
+| **Users** | `/api/v1/users/` | GET, POST | Admin / Admin | List users / Create user |
+| **Users** | `/api/v1/users/{id}/` | GET, PATCH, DELETE | Admin or Own User / Admin or Own User / Admin | Get user / Update user / Delete user |
+| **Profiles** | `/api/v1/users/{id}/profile/` | PATCH | Admin or Own User | Update user profile |
+| **Social Accounts** | `/api/v1/users/{id}/social-accounts/` | POST | Admin or Own User | Create social account |
+| **Social Accounts** | `/api/v1/users/{id}/social-accounts/{social_id}/` | PATCH, DELETE | Admin or Own User / Admin or Own User | Update / Delete social account |
+| **Auth** | `/api/v1/auth/csrf-token/` | GET | None | Get CSRF token |
+| **Auth** | `/api/v1/auth/login/` | POST | None | User authentication |
+| **Auth** | `/api/v1/auth/logout/` | POST | Authenticated User | User logout |
 
 ### Query Parameters
 
@@ -154,6 +186,13 @@ curl -k -X POST \
 - `?category=slug` - Filter by category
 - `?tags=tag1,tag2` - Filter by tags (comma-separated)
 - `?search=query` - Search in title and content
+
+**Media File Support:**
+- **Images**: jpg, jpeg, png, gif, webp (with automatic width/height extraction)
+- **Videos**: mp4, webm
+- **Audio**: mp3, aac, wav, ogg
+- **File Size**: Configurable (typically 10MB max)
+- **Validation**: Automatic file type detection and validation
 
 ### Response Format
 
@@ -178,6 +217,35 @@ All responses follow JSON:API specification:
   }
 }
 ```
+
+### API Endpoints Overview
+
+#### Authentication & Health
+- `GET /health/` - System health check
+- `GET /api/v1/auth/csrf-token/` - Get CSRF token
+- `POST /api/v1/auth/login/` - User login
+- `POST /api/v1/auth/logout/` - User logout
+
+#### Content Management
+- `GET|POST /api/v1/categories/` - List/create categories
+- `GET|PATCH|DELETE /api/v1/categories/{slug}/` - Category operations
+- `GET|POST /api/v1/tags/` - List/create tags
+- `GET|PATCH|DELETE /api/v1/tags/{slug}/` - Tag operations
+- `GET|POST /api/v1/posts/` - List/create posts (with filtering & search)
+- `GET|PATCH|DELETE /api/v1/posts/{slug}/` - Post operations
+
+#### Media Management
+- `GET /api/v1/media/` - List all media files (admin only)
+- `GET /api/v1/media/{id}/` - Get media file details (admin only)
+- `GET|POST /api/v1/posts/{slug}/media/` - List/upload post media
+- `GET|DELETE /api/v1/posts/{slug}/media/{id}/` - Individual media operations
+
+#### User & Profile Management
+- `GET|POST /api/v1/users/` - List/create users (admin only)
+- `GET|PATCH|DELETE /api/v1/users/{id}/` - User operations
+- `PATCH /api/v1/users/{id}/profile/` - Update user profile
+- `POST /api/v1/users/{id}/social-accounts/` - Create social account
+- `PATCH|DELETE /api/v1/users/{id}/social-accounts/{social_id}/` - Manage social accounts
 
 ### Complete API Reference
 
@@ -270,9 +338,18 @@ pre-commit run --all-files
 
 | Role | Permissions |
 |------|-------------|
-| **Admin** | Full access to all resources and operations |
-| **Author** | Create/edit own posts, manage own profile, upload media |
-| **Anonymous** | Read access to published content only |
+| **Admin** | Full CRUD access to all resources, user management, system administration |
+| **Author** | CRUD own posts, manage own profile & social accounts, upload/manage media for own posts |
+| **Anonymous** | Read access to published posts, categories, tags, and public media files |
+
+### Detailed Permissions
+
+- **Categories/Tags**: Only admins can create, update, or delete
+- **Posts**: Authors can create posts (default: draft status), edit/delete own posts. Admins can manage all posts
+- **Media Files**: Authors can upload to own posts, admins can view/manage all media
+- **User Management**: Only admins can create/delete users, view all users
+- **Profiles**: Users can update own profiles, admins can update any profile
+- **Social Accounts**: Users can manage own social accounts, admins can manage any
 
 ## 🔒 Security Features
 
