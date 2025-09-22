@@ -48,7 +48,11 @@ def health_check(request):
         health_data['status'] = 'error'
 
     # Enviroment
-    health_data['environment'] = getattr(settings, 'ENVIRONMENT', 'unknown')
+    health_data['environment'] = (
+        'local'
+        if os.environ.get('DJANGO_SETTINGS_MODULE').endswith('local')
+        else 'production'
+    )
 
     # Metrics
     health_data['metrics'] = {
