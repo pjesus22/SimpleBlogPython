@@ -43,11 +43,11 @@ A robust Django-based blog REST API with secure authentication, HTTPS support, a
 
 ## 🚀 Quick Start
 
-### Docker Setup (Recommended)
+### Production Setup with Docker (Recommended)
 
 1. **Clone the repository**
    ```bash
-   git clone <your-repo-url>
+   git clone https://github.com/pjesus22/SimpleBlogPython.git
    cd simple_blog
    ```
 
@@ -67,17 +67,15 @@ A robust Django-based blog REST API with secure authentication, HTTPS support, a
    curl -k https://localhost/health/
    ```
 
-The API will be available at:
-- **HTTPS**: https://localhost (production)
-- **HTTP**: http://localhost (development)
+The API will be available at https://localhost
 
-### Manual Setup
+### Manual Setup (Local)
 
 For local development without Docker:
 
 1. **Clone and setup Python environment**
    ```bash
-   git clone <your-repo-url>
+   git clone https://github.com/pjesus22/SimpleBlogPython.git
    cd simple_blog
    python3.12 -m venv .venv
    source .venv/bin/activate  # Linux/macOS
@@ -92,7 +90,7 @@ For local development without Docker:
 3. **Environment configuration**
    ```bash
    cp .env.example .env.local
-   # Edit .env.local for development settings
+   # Edit .env.local with your settings
    ```
 
 4. **Database setup**
@@ -108,6 +106,13 @@ For local development without Docker:
    ```bash
    ./manage.py runserver
    ```
+
+6. **Verify installation**
+   ```bash
+   curl -k http://localhost/health/
+   ```
+
+The API will be available at http://localhost
 
 > **Note**: The `/api/v1/users/` endpoint only creates Author users. Admin users must be created using Django's `./manage.py createsuperuser` command.
 
@@ -288,14 +293,11 @@ simple_blog/
 ### Running Tests
 
 ```bash
-# With Docker
-docker compose exec web python -m pytest
-
 # Local development
 pytest
 
-# With coverage
-pytest --cov=apps --cov-report=html
+# With coverage report
+coverage run -m pytest && coverage html
 ```
 
 ### Code Quality
@@ -330,8 +332,8 @@ pre-commit run --all-files
 # Create superuser
 ./manage.py createsuperuser
 
-# Load sample data (if available)
-./manage.py loaddata fixtures/sample_data.json
+# Load initial data (optional)
+# ./manage.py loaddata your_fixtures.json
 ```
 
 ## 🔐 User Roles & Permissions
@@ -518,7 +520,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 - [API Documentation](API.md) - Complete API reference
 - [Change Log](API_CHANGES_SUMMARY.md) - Recent documentation updates
-- [Issues](../../issues) - Report bugs or request features
+- [Issues](https://github.com/pjesus22/SimpleBlogPython/issues) - Report bugs or request features
 
 ## 📝 Changelog
 
